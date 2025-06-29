@@ -141,3 +141,53 @@ Chrome extension permissions allow bypassing CORS restrictions that would normal
 - Network failures during requests
 - Large API specifications (performance)
 - Invalid parameter combinations
+
+## Git Workflow and Commit Guidelines
+
+### Automatic Commit Creation
+When implementing new features or bug fixes, **automatically create commits** after completing each logical unit of work. This ensures continuous development progress is preserved.
+
+#### Commit Creation Rules
+1. **Always create commits** when:
+   - Adding new features
+   - Fixing bugs
+   - Improving existing functionality
+   - Updating documentation
+   - Refactoring code
+
+2. **Commit message format**:
+   ```
+   <type>: <description>
+   
+   <detailed explanation if needed>
+   
+   🤖 Generated with [Claude Code](https://claude.ai/code)
+   
+   Co-Authored-By: Claude <noreply@anthropic.com>
+   ```
+
+3. **Commit types**:
+   - `feat:` - New features
+   - `fix:` - Bug fixes
+   - `refactor:` - Code refactoring
+   - `style:` - UI/styling changes
+   - `docs:` - Documentation updates
+   - `chore:` - Maintenance tasks
+
+#### Push Policy
+- **NEVER push automatically** - pushes should only be done when explicitly requested by the developer
+- Always ask for confirmation before pushing: "Should I push these changes to the remote repository?"
+- If the developer doesn't explicitly request a push, only create the commit locally
+
+#### Example Workflow
+1. Implement feature/fix
+2. Test the implementation
+3. Automatically create commit with descriptive message
+4. Ask developer: "The changes have been committed locally. Would you like me to push to the remote repository?"
+5. Only push if developer confirms
+
+This approach ensures:
+- Continuous progress tracking
+- No lost work due to missed commits
+- Developer control over when changes are shared
+- Clean git history with meaningful commits
