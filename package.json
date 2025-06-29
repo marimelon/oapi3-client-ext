@@ -1,0 +1,33 @@
+{
+  "name": "oapi3-client-ext",
+  "version": "1.0.0",
+  "description": "Chrome Extension for OpenAPI 3.x API Client with $ref resolution and Podman-like UI",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.43",
+    "@types/react-dom": "^18.2.17",
+    "@types/chrome": "^0.0.254",
+    "@types/js-yaml": "^4.0.9",
+    "@crxjs/vite-plugin": "^2.0.0-beta.21",
+    "@vitejs/plugin-react": "^4.2.1",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.8",
+    "tailwindcss": "^3.3.6",
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.32"
+  },
+  "volta": {
+    "node": "22.17.0"
+  }
+}
