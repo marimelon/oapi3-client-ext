@@ -119,20 +119,6 @@ export default function ResponsePanel() {
             </span>
           </div>
         </div>
-        
-        <div className="flex items-center space-x-2">
-          {requestState.result.success ? (
-            <>
-              <span className="text-green-600 text-xl">✅</span>
-              <span className="text-green-700 dark:text-green-400 font-medium">Success</span>
-            </>
-          ) : (
-            <>
-              <span className="text-red-600 text-xl">❌</span>
-              <span className="text-red-700 dark:text-red-400 font-medium">Failed</span>
-            </>
-          )}
-        </div>
       </div>
 
       {/* レスポンスヘッダー */}
