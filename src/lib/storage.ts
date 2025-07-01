@@ -137,6 +137,26 @@ export class StorageManager {
     }
   }
 
+  // 選択された環境の管理
+  async saveSelectedEnvironment(environmentId: string): Promise<void> {
+    try {
+      await chrome.storage.local.set({ selectedEnvironmentId: environmentId })
+    } catch (error) {
+      console.error('Failed to save selected environment:', error)
+      throw new Error('Failed to save selected environment')
+    }
+  }
+
+  async getSelectedEnvironmentId(): Promise<string | null> {
+    try {
+      const result = await chrome.storage.local.get(['selectedEnvironmentId'])
+      return result.selectedEnvironmentId || null
+    } catch (error) {
+      console.error('Failed to get selected environment:', error)
+      return null
+    }
+  }
+
   // ストレージ使用量取得
   async getStorageUsage(): Promise<{ used: number; quota: number }> {
     try {

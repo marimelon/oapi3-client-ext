@@ -44,10 +44,20 @@ export function useStorage() {
       const environments = await storage.getEnvironments()
       dispatch({ type: 'SET_ENVIRONMENTS', payload: environments })
       
-      // デフォルト環境を選択
-      const defaultEnv = environments.find(env => env.isDefault)
-      if (defaultEnv) {
-        dispatch({ type: 'SET_SELECTED_ENVIRONMENT', payload: defaultEnv })
+      // 最後に選択した環境を復元、なければデフォルト環境を選択
+      const selectedEnvId = await storage.getSelectedEnvironmentId()
+      let selectedEnv = null
+      
+      if (selectedEnvId) {
+        selectedEnv = environments.find(env => env.id === selectedEnvId)
+      }
+      
+      if (!selectedEnv) {
+        selectedEnv = environments.find(env => env.isDefault)
+      }
+      
+      if (selectedEnv) {
+        dispatch({ type: 'SET_SELECTED_ENVIRONMENT', payload: selectedEnv })
       }
     } catch (error) {
       dispatch({ type: 'SET_ERROR', payload: error instanceof Error ? error.message : 'Failed to load environments' })
@@ -119,6 +129,15 @@ export function useStorage() {
     ])
   }, [loadOpenApiSpecs, loadEnvironments, loadRequestHistory])
 
+  // 選択環境の保存
+  const saveSelectedEnvironment = useCallback(async (environmentId: string) => {
+    try {
+      await storage.saveSelectedEnvironment(environmentId)
+    } catch (error) {
+      dispatch({ type: 'SET_ERROR', payload: error instanceof Error ? error.message : 'Failed to save selected environment' })
+    }
+  }, [dispatch, storage])
+
   return {
     // OpenAPI仕様
     loadOpenApiSpecs,
@@ -129,6 +148,7 @@ export function useStorage() {
     loadEnvironments,
     saveEnvironment,
     deleteEnvironment,
+    saveSelectedEnvironment,
     
     // リクエスト履歴
     loadRequestHistory,

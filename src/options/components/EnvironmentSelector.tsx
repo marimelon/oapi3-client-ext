@@ -6,7 +6,7 @@ import { generateId } from '../../lib/utils'
 
 export default function EnvironmentSelector() {
   const { state, dispatch } = useAppContext()
-  const { saveEnvironment, deleteEnvironment } = useStorage()
+  const { saveEnvironment, deleteEnvironment, saveSelectedEnvironment } = useStorage()
   const [showForm, setShowForm] = useState(false)
   const [showDropdown, setShowDropdown] = useState(false)
   const [editingEnv, setEditingEnv] = useState<Environment | null>(null)
@@ -18,6 +18,7 @@ export default function EnvironmentSelector() {
 
   const handleEnvironmentSelect = (env: Environment) => {
     dispatch({ type: 'SET_SELECTED_ENVIRONMENT', payload: env })
+    saveSelectedEnvironment(env.id)
     setShowDropdown(false)
   }
 
@@ -61,6 +62,7 @@ export default function EnvironmentSelector() {
 
     await saveEnvironment(environment, !!editingEnv)
     dispatch({ type: 'SET_SELECTED_ENVIRONMENT', payload: environment })
+    saveSelectedEnvironment(environment.id)
     setShowForm(false)
     setEditingEnv(null)
   }
