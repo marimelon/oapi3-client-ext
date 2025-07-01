@@ -59,7 +59,7 @@ export default function EnvironmentSelector() {
       isDefault: !editingEnv && state.environments.length === 0
     }
 
-    await saveEnvironment(environment)
+    await saveEnvironment(environment, !!editingEnv)
     dispatch({ type: 'SET_SELECTED_ENVIRONMENT', payload: environment })
     setShowForm(false)
     setEditingEnv(null)

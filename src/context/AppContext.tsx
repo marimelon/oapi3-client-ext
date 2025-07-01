@@ -27,6 +27,7 @@ type AppAction =
   | { type: 'SET_SELECTED_SPEC'; payload: OpenAPISpec | null }
   | { type: 'SET_ENVIRONMENTS'; payload: Environment[] }
   | { type: 'ADD_ENVIRONMENT'; payload: Environment }
+  | { type: 'UPDATE_ENVIRONMENT'; payload: Environment }
   | { type: 'DELETE_ENVIRONMENT'; payload: string }
   | { type: 'SET_SELECTED_ENVIRONMENT'; payload: Environment | null }
   | { type: 'SET_SELECTED_ENDPOINT'; payload: any | null }
@@ -74,6 +75,14 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, environments: action.payload }
     case 'ADD_ENVIRONMENT':
       return { ...state, environments: [...state.environments, action.payload] }
+    case 'UPDATE_ENVIRONMENT':
+      return {
+        ...state,
+        environments: state.environments.map(env => 
+          env.id === action.payload.id ? action.payload : env
+        ),
+        selectedEnvironment: state.selectedEnvironment?.id === action.payload.id ? action.payload : state.selectedEnvironment
+      }
     case 'DELETE_ENVIRONMENT':
       return {
         ...state,

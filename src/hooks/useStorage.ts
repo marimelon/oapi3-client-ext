@@ -54,10 +54,15 @@ export function useStorage() {
     }
   }, [dispatch, storage])
 
-  const saveEnvironment = useCallback(async (environment: Environment) => {
+  const saveEnvironment = useCallback(async (environment: Environment, isUpdate = false) => {
     try {
       await storage.saveEnvironment(environment)
-      dispatch({ type: 'ADD_ENVIRONMENT', payload: environment })
+      
+      if (isUpdate) {
+        dispatch({ type: 'UPDATE_ENVIRONMENT', payload: environment })
+      } else {
+        dispatch({ type: 'ADD_ENVIRONMENT', payload: environment })
+      }
       
       // デフォルト環境の場合は選択状態にする
       if (environment.isDefault) {
