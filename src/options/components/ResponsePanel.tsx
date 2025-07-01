@@ -253,52 +253,27 @@ export default function ResponsePanel() {
         </div>
       </div>
 
-      {/* レスポンス解析 */}
+      {/* レスポンス分析 - コンパクト表示 */}
       {requestState.result.data && typeof requestState.result.data === 'object' && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-          <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700">
-            <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">Response Analysis</h3>
-          </div>
-          <div className="p-3">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="text-center">
-                <div className="text-xl font-bold text-blue-600">
-                  {Array.isArray(requestState.result.data) ? '📋' : '📄'}
-                </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Type</div>
-                <div className="font-medium text-gray-900 dark:text-gray-100 text-sm">
-                  {Array.isArray(requestState.result.data) ? 'Array' : 'Object'}
-                </div>
-              </div>
-              
-              {Array.isArray(requestState.result.data) && (
-                <div className="text-center">
-                  <div className="text-xl font-bold text-green-600">
-                    {requestState.result.data.length}
-                  </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Items</div>
-                  <div className="font-medium text-gray-900 dark:text-gray-100 text-sm">Array Length</div>
-                </div>
-              )}
-              
-              {typeof requestState.result.data === 'object' && !Array.isArray(requestState.result.data) && (
-                <div className="text-center">
-                  <div className="text-xl font-bold text-purple-600">
-                    {Object.keys(requestState.result.data).length}
-                  </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Properties</div>
-                  <div className="font-medium text-gray-900 dark:text-gray-100 text-sm">Object Keys</div>
-                </div>
-              )}
-              
-              <div className="text-center">
-                <div className="text-xl font-bold text-orange-600">
-                  {Math.round(JSON.stringify(requestState.result.data).length / 1024)}
-                </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Size</div>
-                <div className="font-medium text-gray-900 dark:text-gray-100 text-sm">KB</div>
-              </div>
-            </div>
+        <div className="bg-gray-50 dark:bg-gray-700/50 rounded-md p-2 border border-gray-200 dark:border-gray-600">
+          <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
+            <span className="flex items-center space-x-4">
+              <span>
+                {Array.isArray(requestState.result.data) ? '📋 Array' : '📄 Object'}
+              </span>
+              <span>
+                {Array.isArray(requestState.result.data) 
+                  ? `${requestState.result.data.length} items`
+                  : `${Object.keys(requestState.result.data).length} keys`
+                }
+              </span>
+              <span>
+                {Math.round(JSON.stringify(requestState.result.data).length / 1024)} KB
+              </span>
+            </span>
+            <span className="text-gray-500 dark:text-gray-500">
+              Analysis
+            </span>
           </div>
         </div>
       )}
