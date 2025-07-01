@@ -1,4 +1,5 @@
 import { OpenAPISpec, Environment, RequestHistory } from '../types'
+import { STORAGE_CONSTANTS } from './constants'
 
 export class StorageManager {
   private static instance: StorageManager
@@ -67,7 +68,7 @@ export class StorageManager {
         environments.push(env)
       }
       
-      await chrome.storage.local.set({ environments })
+      await chrome.storage.local.set({ [STORAGE_CONSTANTS.STORAGE_KEYS.ENVIRONMENTS]: environments })
     } catch (error) {
       console.error('Failed to save environment:', error)
       throw new Error('Failed to save environment')
@@ -76,8 +77,8 @@ export class StorageManager {
 
   async getEnvironments(): Promise<Environment[]> {
     try {
-      const result = await chrome.storage.local.get(['environments'])
-      return result.environments || []
+      const result = await chrome.storage.local.get([STORAGE_CONSTANTS.STORAGE_KEYS.ENVIRONMENTS])
+      return result[STORAGE_CONSTANTS.STORAGE_KEYS.ENVIRONMENTS] || []
     } catch (error) {
       console.error('Failed to get environments:', error)
       return []
@@ -88,7 +89,7 @@ export class StorageManager {
     try {
       const environments = await this.getEnvironments()
       const filteredEnvironments = environments.filter(env => env.id !== id)
-      await chrome.storage.local.set({ environments: filteredEnvironments })
+      await chrome.storage.local.set({ [STORAGE_CONSTANTS.STORAGE_KEYS.ENVIRONMENTS]: filteredEnvironments })
     } catch (error) {
       console.error('Failed to delete environment:', error)
       throw new Error('Failed to delete environment')
@@ -108,9 +109,9 @@ export class StorageManager {
   // リクエスト履歴の管理
   async saveRequestHistory(history: RequestHistory): Promise<void> {
     try {
-      const histories = await this.getRequestHistory(49) // 最新49件 + 新規1件 = 50件
+      const histories = await this.getRequestHistory(STORAGE_CONSTANTS.MAX_HISTORY_ITEMS)
       const newHistories = [history, ...histories]
-      await chrome.storage.local.set({ requestHistory: newHistories })
+      await chrome.storage.local.set({ [STORAGE_CONSTANTS.STORAGE_KEYS.REQUEST_HISTORY]: newHistories })
     } catch (error) {
       console.error('Failed to save request history:', error)
       throw new Error('Failed to save request history')
@@ -119,8 +120,8 @@ export class StorageManager {
 
   async getRequestHistory(limit = 50): Promise<RequestHistory[]> {
     try {
-      const result = await chrome.storage.local.get(['requestHistory'])
-      const histories = result.requestHistory || []
+      const result = await chrome.storage.local.get([STORAGE_CONSTANTS.STORAGE_KEYS.REQUEST_HISTORY])
+      const histories = result[STORAGE_CONSTANTS.STORAGE_KEYS.REQUEST_HISTORY] || []
       return histories.slice(0, limit)
     } catch (error) {
       console.error('Failed to get request history:', error)
@@ -130,7 +131,7 @@ export class StorageManager {
 
   async clearHistory(): Promise<void> {
     try {
-      await chrome.storage.local.set({ requestHistory: [] })
+      await chrome.storage.local.set({ [STORAGE_CONSTANTS.STORAGE_KEYS.REQUEST_HISTORY]: [] })
     } catch (error) {
       console.error('Failed to clear history:', error)
       throw new Error('Failed to clear request history')

@@ -1,6 +1,7 @@
 import * as yaml from 'js-yaml'
-import { EndpointInfo } from '../types'
+import { EndpointInfo, HttpMethod } from '../types'
 import { safeJsonParse, debugLog } from './utils'
+import { OPENAPI_CONSTANTS } from './constants'
 
 export class OpenApiParser {
   private static instance: OpenApiParser
@@ -172,7 +173,7 @@ export class OpenApiParser {
     rootSpec: any, 
     visitedRefs: Set<string> = new Set(), 
     resolutionStack: string[] = [],
-    maxDepth: number = 100 // 最大解決深度を増加
+    maxDepth: number = OPENAPI_CONSTANTS.DEFAULT_MAX_DEPTH
   ): any {
     // 最大深度チェック
     if (resolutionStack.length > maxDepth) {
@@ -289,7 +290,7 @@ export class OpenApiParser {
           if (operation) {
             endpoints.push({
               path,
-              method: method.toUpperCase(),
+              method: method.toUpperCase() as HttpMethod,
               summary: operation.summary,
               description: operation.description,
               parameters: operation.parameters,

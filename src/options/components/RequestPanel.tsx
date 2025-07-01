@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { useAppContext } from '../../context/AppContext'
 import { useOpenApi } from '../../hooks/useOpenApi'
 import { useRequest } from '../../hooks/useRequest'
+import { useCopyToClipboard } from '../../hooks/useCopyToClipboard'
+import { HttpMethod } from '../../types'
 import { 
   extractPathParameters, 
   validatePathParameters, 
@@ -12,6 +14,7 @@ export default function RequestPanel() {
   const { state } = useAppContext()
   const { getParameterSchema, getRequestBodySchema, generateSampleData } = useOpenApi()
   const { executeRequest, requestState } = useRequest()
+  const { copied: copiedUrl, copyToClipboard } = useCopyToClipboard()
   
   const [pathParams, setPathParams] = useState<Record<string, string>>({})
   const [queryParams, setQueryParams] = useState<Record<string, string>>({})
@@ -20,7 +23,6 @@ export default function RequestPanel() {
   const [requestBody, setRequestBody] = useState('')
   const [customUrlPath, setCustomUrlPath] = useState('')
   const [customMethod, setCustomMethod] = useState('GET')
-  const [copiedUrl, setCopiedUrl] = useState(false)
 
   const selectedEndpoint = state.selectedEndpoint
 
@@ -133,7 +135,7 @@ export default function RequestPanel() {
     try {
       const finalEndpoint = {
         path: currentPath,
-        method: customMethod,
+        method: customMethod as HttpMethod,
         summary: selectedEndpoint?.summary || 'Custom Request'
       }
 
@@ -264,14 +266,8 @@ export default function RequestPanel() {
   }
 
   // URLコピー処理
-  const handleUrlCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(urlPreview)
-      setCopiedUrl(true)
-      setTimeout(() => setCopiedUrl(false), 2000)
-    } catch (error) {
-      console.error('Failed to copy URL:', error)
-    }
+  const handleUrlCopy = () => {
+    copyToClipboard(urlPreview)
   }
 
 

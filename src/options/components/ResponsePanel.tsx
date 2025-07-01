@@ -1,26 +1,15 @@
 import { useState } from 'react'
 import { useRequest } from '../../hooks/useRequest'
+import { useMultiCopyToClipboard } from '../../hooks/useCopyToClipboard'
 import { getStatusColor } from '../../lib/utils'
 
 export default function ResponsePanel() {
   const { requestState, formatResponse } = useRequest()
   const [isHeadersExpanded, setIsHeadersExpanded] = useState(false)
-  const [copiedItems, setCopiedItems] = useState<Set<string>>(new Set())
+  const { copyToClipboard, isCopied } = useMultiCopyToClipboard()
 
-  const handleCopy = async (text: string, itemId: string) => {
-    try {
-      await navigator.clipboard.writeText(text)
-      setCopiedItems(prev => new Set([...prev, itemId]))
-      setTimeout(() => {
-        setCopiedItems(prev => {
-          const newSet = new Set(prev)
-          newSet.delete(itemId)
-          return newSet
-        })
-      }, 2000)
-    } catch (error) {
-      console.error('Failed to copy:', error)
-    }
+  const handleCopy = (text: string, itemId: string) => {
+    copyToClipboard(text, itemId)
   }
 
   if (requestState.loading) {
@@ -127,12 +116,12 @@ export default function ResponsePanel() {
                 <button
                   onClick={() => handleCopy(headersFormatted, 'headers')}
                   className={`absolute top-1 right-1 px-2 py-1 border rounded text-xs transition-colors ${
-                    copiedItems.has('headers')
+                    isCopied('headers')
                       ? 'bg-green-100 dark:bg-green-900 border-green-300 dark:border-green-700 text-green-700 dark:text-green-300'
                       : 'bg-white dark:bg-gray-600 border-gray-300 dark:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200'
                   }`}
                 >
-                  {copiedItems.has('headers') ? 'Copied!' : 'Copy'}
+                  {isCopied('headers') ? 'Copied!' : 'Copy'}
                 </button>
               </div>
             ) : (
@@ -156,12 +145,12 @@ export default function ResponsePanel() {
               <button
                 onClick={() => handleCopy(bodyFormatted, 'body')}
                 className={`absolute top-1 right-1 px-2 py-1 border rounded text-xs transition-colors ${
-                  copiedItems.has('body')
+                  isCopied('body')
                     ? 'bg-green-100 dark:bg-green-900 border-green-300 dark:border-green-700 text-green-700 dark:text-green-300'
                     : 'bg-white dark:bg-gray-600 border-gray-300 dark:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200'
                 }`}
               >
-                {copiedItems.has('body') ? 'Copied!' : 'Copy'}
+                {isCopied('body') ? 'Copied!' : 'Copy'}
               </button>
             </div>
           ) : (
