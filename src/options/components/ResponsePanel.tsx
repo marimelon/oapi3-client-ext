@@ -5,11 +5,13 @@ import { getStatusColor } from '../../lib/utils'
 import JsonCollapsibleViewer from '../../components/JsonCollapsibleViewer'
 
 type ViewMode = 'compact' | 'expanded' | 'full'
+type JsonDisplayMode = 'tree' | 'raw'
 
 export default function ResponsePanel() {
   const { requestState, formatResponse } = useRequest()
   const [isHeadersExpanded, setIsHeadersExpanded] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('expanded')
+  const [jsonDisplayMode, setJsonDisplayMode] = useState<JsonDisplayMode>('tree')
   const [bodyHeight, setBodyHeight] = useState(400)
   const [isResizing, setIsResizing] = useState(false)
   const resizeRef = useRef<HTMLDivElement>(null)
@@ -182,6 +184,30 @@ export default function ResponsePanel() {
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">Response Body</h3>
             <div className="flex items-center space-x-2">
+              {requestState.result?.data && typeof requestState.result.data === 'object' && (
+                <div className="flex items-center space-x-1 border border-gray-300 dark:border-gray-600 rounded">
+                  <button
+                    onClick={() => setJsonDisplayMode('tree')}
+                    className={`px-2 py-1 text-xs rounded-l transition-colors ${
+                      jsonDisplayMode === 'tree'
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    Tree
+                  </button>
+                  <button
+                    onClick={() => setJsonDisplayMode('raw')}
+                    className={`px-2 py-1 text-xs rounded-r transition-colors ${
+                      jsonDisplayMode === 'raw'
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    Raw
+                  </button>
+                </div>
+              )}
               <select
                 value={viewMode}
                 onChange={(e) => setViewMode(e.target.value as ViewMode)}
@@ -202,9 +228,13 @@ export default function ResponsePanel() {
                 style={{ height: getBodyHeight() }}
               >
                 {requestState.result?.data && typeof requestState.result.data === 'object' ? (
-                  <div className="text-sm">
-                    <JsonCollapsibleViewer data={requestState.result.data} />
-                  </div>
+                  jsonDisplayMode === 'tree' ? (
+                    <div className="text-sm">
+                      <JsonCollapsibleViewer data={requestState.result.data} />
+                    </div>
+                  ) : (
+                    <pre className="whitespace-pre-wrap">{bodyFormatted}</pre>
+                  )
                 ) : (
                   <pre className="whitespace-pre-wrap">{bodyFormatted}</pre>
                 )}
