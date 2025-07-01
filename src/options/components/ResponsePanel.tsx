@@ -3,6 +3,7 @@ import { useRequest } from '../../hooks/useRequest'
 import { useMultiCopyToClipboard } from '../../hooks/useCopyToClipboard'
 import { getStatusColor } from '../../lib/utils'
 import JsonCollapsibleViewer from '../../components/JsonCollapsibleViewer'
+import JsonSyntaxHighlighter from '../../components/JsonSyntaxHighlighter'
 
 type ViewMode = 'compact' | 'expanded' | 'full'
 type JsonDisplayMode = 'tree' | 'raw'
@@ -272,10 +273,15 @@ export default function ResponsePanel() {
                       <JsonCollapsibleViewer data={requestState.result.data} />
                     </div>
                   ) : (
-                    <pre className="whitespace-pre-wrap">{bodyFormatted}</pre>
+                    <JsonSyntaxHighlighter jsonString={bodyFormatted} />
                   )
                 ) : (
-                  <pre className="whitespace-pre-wrap">{bodyFormatted}</pre>
+                  // For non-JSON responses, try to detect if it's JSON-like and highlight accordingly
+                  bodyFormatted.trim().startsWith('{') || bodyFormatted.trim().startsWith('[') ? (
+                    <JsonSyntaxHighlighter jsonString={bodyFormatted} />
+                  ) : (
+                    <pre className="whitespace-pre-wrap text-gray-700 dark:text-gray-300">{bodyFormatted}</pre>
+                  )
                 )}
               </div>
               
