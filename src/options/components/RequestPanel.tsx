@@ -188,6 +188,11 @@ export default function RequestPanel() {
     setCustomQueryParams(prev => ({ ...prev, [newKey]: '' }))
   }
 
+  const addCustomHeader = () => {
+    const newKey = `header${Object.keys(headers).length + 1}`
+    setHeaders(prev => ({ ...prev, [newKey]: '' }))
+  }
+
   const removeCustomQueryParam = (key: string) => {
     setCustomQueryParams(prev => {
       const newParams = { ...prev }
@@ -628,7 +633,30 @@ export default function RequestPanel() {
 
         {/* カスタムヘッダー */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3">
-          <h3 className="text-base font-medium text-gray-900 dark:text-gray-100 mb-3">Custom Headers</h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-base font-medium text-gray-900 dark:text-gray-100 flex items-center">
+              Custom Headers
+              <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                ({Object.keys(headers).length})
+              </span>
+            </h3>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={addCustomHeader}
+                className="px-2 py-1 bg-blue-600 dark:bg-blue-700 text-white text-xs rounded hover:bg-blue-700 dark:hover:bg-blue-600"
+              >
+                + Add
+              </button>
+              {Object.keys(headers).length > 0 && (
+                <button
+                  onClick={() => setHeaders({})}
+                  className="px-2 py-1 bg-gray-400 dark:bg-gray-600 text-white text-xs rounded hover:bg-gray-500 dark:hover:bg-gray-500"
+                >
+                  Clear All
+                </button>
+              )}
+            </div>
+          </div>
           <div className="space-y-2">
             {Object.entries(headers).map(([key, value], index) => (
               <div key={index} className="flex gap-2">
@@ -663,12 +691,11 @@ export default function RequestPanel() {
                 </button>
               </div>
             ))}
-            <button
-              onClick={() => setHeaders(prev => ({ ...prev, '': '' }))}
-              className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm rounded bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
-            >
-              + Add Header
-            </button>
+            {Object.keys(headers).length === 0 && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 text-center py-2">
+                No custom headers. Click "Add" to create one.
+              </p>
+            )}
           </div>
         </div>
 
