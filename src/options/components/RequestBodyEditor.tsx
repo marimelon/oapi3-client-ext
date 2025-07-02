@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import RequestBodyModeToggle from './RequestBodyModeToggle'
 import RequestBodyForm from './RequestBodyForm'
+import { useAppContext } from '../../context/AppContext'
 
 interface RequestBodyEditorProps {
   schema: any
@@ -15,9 +16,51 @@ export default function RequestBodyEditor({
   onChange, 
   placeholder 
 }: RequestBodyEditorProps) {
+  const { state } = useAppContext()
   const [mode, setMode] = useState<'form' | 'raw'>('form')
   const [formValue, setFormValue] = useState<any>({})
   const [rawValue, setRawValue] = useState(value)
+
+  // Resolve $ref references in schema
+  const resolvedSchema = useMemo(() => {
+    if (!schema || !schema.schema || !state.selectedSpec) {
+      return schema
+    }
+
+    // If schema contains $ref, try to resolve it
+    if (schema.schema.$ref) {
+      try {
+        // We need to get the full resolved spec and extract our specific schema
+        const fullResolvedSpec: any = state.selectedSpec.spec
+        
+        // Parse the $ref path manually
+        const refPath = schema.schema.$ref
+        if (refPath.startsWith('#/')) {
+          const pathParts = refPath.substring(2).split('/')
+          let resolvedRef: any = fullResolvedSpec
+          for (const part of pathParts) {
+            if (resolvedRef && typeof resolvedRef === 'object') {
+              resolvedRef = resolvedRef[part]
+            } else {
+              resolvedRef = undefined
+              break
+            }
+          }
+          
+          if (resolvedRef) {
+            return {
+              ...schema,
+              schema: resolvedRef
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to resolve $ref:', error)
+      }
+    }
+
+    return schema
+  }, [schema, state.selectedSpec])
 
   // Initialize form value from JSON string
   useEffect(() => {
@@ -76,15 +119,15 @@ export default function RequestBodyEditor({
     onChange(newRawValue)
   }
 
-  // Check if form mode is available
-  const hasSchema = schema && schema.schema
+  // Check if form mode is available (use resolved schema)
+  const hasSchema = resolvedSchema && resolvedSchema.schema
   const canUseForm = hasSchema && (
-    schema.schema.type === 'object' || 
-    schema.schema.type === 'array' || 
-    schema.schema.type === 'string' || 
-    schema.schema.type === 'number' || 
-    schema.schema.type === 'integer' || 
-    schema.schema.type === 'boolean'
+    resolvedSchema.schema.type === 'object' || 
+    resolvedSchema.schema.type === 'array' || 
+    resolvedSchema.schema.type === 'string' || 
+    resolvedSchema.schema.type === 'number' || 
+    resolvedSchema.schema.type === 'integer' || 
+    resolvedSchema.schema.type === 'boolean'
   )
 
   return (
@@ -100,7 +143,7 @@ export default function RequestBodyEditor({
       {/* Form Mode */}
       {mode === 'form' && canUseForm && (
         <RequestBodyForm
-          schema={schema}
+          schema={resolvedSchema}
           value={formValue}
           onChange={handleFormChange}
         />
