@@ -1,5 +1,6 @@
 import { RequestHistory } from '../types'
 import { generateId, safeJsonStringify, safeJsonParse } from './utils'
+import { headerModifier } from './headerModifier'
 
 export interface RequestConfig {
   method: string
@@ -98,12 +99,33 @@ export class RequestBuilder {
     const startTime = Date.now()
     
     try {
+      // Restricted headers (User-Agent, etc.) setup via declarativeNetRequest if available
+      if (config.headers && headerModifier.isDeclarativeNetRequestAvailable()) {
+        const restrictedHeaders = headerModifier.getRestrictedHeaders(config.headers)
+        if (Object.keys(restrictedHeaders).length > 0) {
+          try {
+            await headerModifier.setupHeaderModification({
+              url: config.url,
+              headers: restrictedHeaders,
+              method: config.method
+            })
+          } catch (error) {
+            console.warn('Failed to setup header modification:', error)
+          }
+        }
+      }
+
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), config.timeout || 30000)
 
+      // Use only non-restricted headers for fetch API
+      const fetchHeaders = config.headers 
+        ? headerModifier.getNormalHeaders(config.headers)
+        : undefined
+
       const fetchOptions: RequestInit = {
         method: config.method,
-        headers: config.headers,
+        headers: fetchHeaders,
         signal: controller.signal
       }
 
@@ -153,6 +175,11 @@ export class RequestBuilder {
       }
 
     } catch (error) {
+      // Clean up declarativeNetRequest rules on error
+      if (headerModifier.isDeclarativeNetRequestAvailable()) {
+        headerModifier.clearRules().catch(console.warn)
+      }
+      
       const duration = Date.now() - startTime
       
       if (error instanceof Error) {

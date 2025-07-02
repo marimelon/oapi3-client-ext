@@ -8,7 +8,8 @@ export default defineManifest({
   
   permissions: [
     'storage',
-    'activeTab'
+    'activeTab',
+    'declarativeNetRequest'
   ],
   
   host_permissions: [
