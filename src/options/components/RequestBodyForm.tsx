@@ -1,7 +1,9 @@
 import SchemaFieldInput from './SchemaFieldInput'
+import type { ResolvedRequestBodySchema } from '../../types/schema'
+import { filterReadOnlyProperties } from '../../lib/schema-utils'
 
 interface RequestBodyFormProps {
-  schema: any
+  schema: ResolvedRequestBodySchema
   value: any
   onChange: (value: any) => void
 }
@@ -23,8 +25,7 @@ export default function RequestBodyForm({ schema, value, onChange }: RequestBody
     <div className="space-y-4">
       {schema.schema.type === 'object' && schema.schema.properties ? (
         // Object schema - render each property
-        Object.entries(schema.schema.properties)
-          .filter(([, propSchema]: [string, any]) => !propSchema.readOnly) // Skip readOnly fields
+        filterReadOnlyProperties(schema.schema.properties)
           .map(([propName, propSchema]: [string, any]) => (
             <SchemaFieldInput
               key={propName}

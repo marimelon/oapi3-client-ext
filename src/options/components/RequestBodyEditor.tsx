@@ -2,6 +2,9 @@ import { useState, useEffect, useMemo } from 'react'
 import RequestBodyModeToggle from './RequestBodyModeToggle'
 import RequestBodyForm from './RequestBodyForm'
 import { useAppContext } from '../../context/AppContext'
+import { SchemaResolver } from '../../lib/schema-resolver'
+import { canUseFormMode } from '../../lib/schema-utils'
+import type { ResolvedRequestBodySchema } from '../../types/schema'
 
 interface RequestBodyEditorProps {
   schema: any
@@ -21,75 +24,12 @@ export default function RequestBodyEditor({
   const [formValue, setFormValue] = useState<any>({})
   const [rawValue, setRawValue] = useState(value)
 
-  // Recursively resolve $ref references in schema
-  const resolvedSchema = useMemo(() => {
-    if (!schema || !schema.schema || !state.selectedSpec) {
+  // Resolve $ref references in schema using dedicated service
+  const resolvedSchema: ResolvedRequestBodySchema | null = useMemo(() => {
+    if (!schema || !state.selectedSpec) {
       return schema
     }
-
-    const fullResolvedSpec: any = state.selectedSpec.spec
-
-    // Recursive function to resolve $ref references
-    const resolveRefs = (obj: any, visited = new Set<string>()): any => {
-      if (!obj || typeof obj !== 'object') {
-        return obj
-      }
-
-      // Handle $ref
-      if (obj.$ref) {
-        const refPath = obj.$ref
-        if (refPath.startsWith('#/')) {
-          // Prevent circular references
-          if (visited.has(refPath)) {
-            console.warn('Circular reference detected:', refPath)
-            return obj
-          }
-
-          visited.add(refPath)
-          
-          const pathParts = refPath.substring(2).split('/')
-          let resolvedRef: any = fullResolvedSpec
-          for (const part of pathParts) {
-            if (resolvedRef && typeof resolvedRef === 'object') {
-              resolvedRef = resolvedRef[part]
-            } else {
-              resolvedRef = undefined
-              break
-            }
-          }
-          
-          if (resolvedRef) {
-            // Recursively resolve the resolved reference
-            return resolveRefs(resolvedRef, new Set(visited))
-          }
-        }
-        return obj
-      }
-
-      // Handle arrays
-      if (Array.isArray(obj)) {
-        return obj.map((item: any) => resolveRefs(item, new Set(visited)))
-      }
-
-      // Handle objects - recursively resolve properties
-      const resolved: any = {}
-      for (const [key, value] of Object.entries(obj)) {
-        resolved[key] = resolveRefs(value, new Set(visited))
-      }
-      
-      return resolved
-    }
-
-    try {
-      const resolvedSchemaObj = resolveRefs(schema.schema)
-      return {
-        ...schema,
-        schema: resolvedSchemaObj
-      }
-    } catch (error) {
-      console.warn('Failed to resolve $ref references:', error)
-      return schema
-    }
+    return SchemaResolver.resolveRequestBodySchema(schema, state.selectedSpec.spec)
   }, [schema, state.selectedSpec])
 
   // Initialize form value from JSON string
@@ -150,15 +90,7 @@ export default function RequestBodyEditor({
   }
 
   // Check if form mode is available (use resolved schema)
-  const hasSchema = resolvedSchema && resolvedSchema.schema
-  const canUseForm = hasSchema && (
-    resolvedSchema.schema.type === 'object' || 
-    resolvedSchema.schema.type === 'array' || 
-    resolvedSchema.schema.type === 'string' || 
-    resolvedSchema.schema.type === 'number' || 
-    resolvedSchema.schema.type === 'integer' || 
-    resolvedSchema.schema.type === 'boolean'
-  )
+  const canUseForm = canUseFormMode(resolvedSchema)
 
   return (
     <div>
@@ -171,7 +103,7 @@ export default function RequestBodyEditor({
       )}
 
       {/* Form Mode */}
-      {mode === 'form' && canUseForm && (
+      {mode === 'form' && canUseForm && resolvedSchema && (
         <RequestBodyForm
           schema={resolvedSchema}
           value={formValue}
