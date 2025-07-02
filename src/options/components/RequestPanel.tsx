@@ -9,6 +9,7 @@ import {
   validatePathParameters, 
   buildUrlPreview 
 } from '../../lib/utils'
+import RequestBodyEditor from './RequestBodyEditor'
 
 export default function RequestPanel() {
   const { state } = useAppContext()
@@ -709,11 +710,11 @@ export default function RequestPanel() {
             {requestBodySchema?.description && (
               <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">{requestBodySchema.description}</p>
             )}
-            <textarea
+            <RequestBodyEditor
+              schema={requestBodySchema}
               value={requestBody}
-              onChange={(e) => setRequestBody(e.target.value)}
+              onChange={setRequestBody}
               placeholder={requestBodySchema?.example ? JSON.stringify(requestBodySchema.example, null, 2) : 'Enter JSON request body'}
-              className="w-full h-48 px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-sm font-mono bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
         )}

@@ -71,12 +71,51 @@ interface AppState {
 - Responsive design with proper contrast ratios
 - All interactive elements have appropriate dark mode styling
 
+### Request Body Builder (RapidAPI-style)
+A dual-mode request body editor that provides both form-based and raw JSON input:
+
+**Architecture:**
+- **Form Mode**: Schema-driven form inputs with type-specific UI elements
+- **Raw Mode**: Traditional JSON text area with syntax highlighting
+- **Dual State Management**: Bidirectional synchronization between form and JSON states
+- **OpenAPI Integration**: Automatic form generation from request body schemas
+
+**Component Structure:**
+```typescript
+RequestBodyEditor (Main Container)
+├── RequestBodyModeToggle (Form/Raw toggle)
+├── RequestBodyForm (Schema-based form)
+│   └── SchemaFieldInput (Individual field components)
+└── RequestBodyRaw (JSON text area - existing)
+```
+
+**Field Type Support:**
+- **string**: Text input with validation
+- **number/integer**: Numeric input with step controls
+- **boolean**: Checkbox input
+- **array**: Dynamic list with add/remove items
+- **object**: Nested fieldsets with expandable sections
+- **enum**: Dropdown/select input
+
+**Data Flow:**
+```
+OpenAPI Schema → Form Generator → User Input (Form) ↔ JSON State ↔ User Input (Raw) → Request
+```
+
+**Features:**
+- Required field validation with visual indicators (*)
+- Schema description tooltips
+- Type-specific input validation
+- Dynamic array/object manipulation
+- Seamless mode switching with state preservation
+
 ### Request Execution Flow
 1. Parameter validation (path params, query params)
 2. URL construction with parameter substitution
 3. Header merging (environment + custom headers)
-4. HTTP request via fetch API with Chrome extension permissions
-5. Response processing and history storage
+4. Request body processing (form → JSON or raw JSON validation)
+5. HTTP request via fetch API with Chrome extension permissions
+6. Response processing and history storage
 
 ### Copy Functionality
 - Visual feedback with temporary "Copied!" state (2 seconds)
@@ -119,6 +158,12 @@ Chrome extension permissions allow bypassing CORS restrictions that would normal
 - `src/context/AppContext.tsx`: Central state management
 - `src/hooks/useOpenApi.ts`: OpenAPI business logic hook
 - `src/hooks/useRequest.ts`: Request execution logic hook
+
+### Request Body Builder Components
+- `src/options/components/RequestBodyEditor.tsx`: Main container with mode switching
+- `src/options/components/RequestBodyForm.tsx`: Schema-based form generator
+- `src/options/components/SchemaFieldInput.tsx`: Individual field input components
+- `src/options/components/RequestBodyModeToggle.tsx`: Form/Raw mode toggle
 
 ### UI Components
 - All components support dark mode
