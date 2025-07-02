@@ -673,7 +673,7 @@ export default function RequestPanel() {
         </div>
 
         {/* リクエストボディ */}
-        {(requestBodySchema || ['POST', 'PUT', 'PATCH'].includes(customMethod.toUpperCase())) && (
+        {(requestBodySchema || ['POST', 'PUT', 'PATCH', 'DELETE'].includes(customMethod.toUpperCase())) && (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3">
             <h3 className="text-base font-medium text-gray-900 dark:text-gray-100 mb-3">
               Request Body
