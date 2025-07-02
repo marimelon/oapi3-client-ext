@@ -627,10 +627,10 @@ export default function RequestPanel() {
         {/* カスタムヘッダー */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3">
           <h3 className="text-base font-medium text-gray-900 dark:text-gray-100 mb-3">Custom Headers</h3>
-          {Object.keys(headers).some(key => key.toLowerCase() === 'user-agent') && (
+          {Object.keys(headers).some(key => key.toLowerCase() === 'user-agent' && headers[key]?.trim()) && (
             <div className="mb-3 p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded text-sm">
               <p className="text-amber-700 dark:text-amber-300">
-                ⚠️ User-Agent header may not be applied due to browser security restrictions. Use declarativeNetRequest for reliable User-Agent modification.
+                ⚠️ User-Agent header requires extension reload to take effect due to browser security restrictions.
               </p>
             </div>
           )}
