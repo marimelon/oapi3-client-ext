@@ -179,15 +179,36 @@ When implementing new features or bug fixes, **automatically create commits** af
 - Always ask for confirmation before pushing: "Should I push these changes to the remote repository?"
 - If the developer doesn't explicitly request a push, only create the commit locally
 
+#### Documentation Update Requirements
+When completing work, **always update relevant documentation** to reflect changes:
+
+1. **Update CLAUDE.md** when:
+   - Adding new components or architectural patterns
+   - Changing core functionality or workflows
+   - Adding new development commands or processes
+   - Modifying key implementation details
+
+2. **Update component documentation** when:
+   - Adding new props or interfaces
+   - Changing component behavior
+   - Adding new features to existing components
+
+3. **Update README or other docs** when:
+   - Changing installation or setup procedures
+   - Adding new dependencies
+   - Modifying user-facing functionality
+
 #### Example Workflow
 1. Implement feature/fix
 2. Test the implementation
-3. Automatically create commit with descriptive message
-4. Ask developer: "The changes have been committed locally. Would you like me to push to the remote repository?"
-5. Only push if developer confirms
+3. **Update relevant documentation** (CLAUDE.md, component docs, etc.)
+4. Automatically create commit with descriptive message including doc updates
+5. Ask developer: "The changes have been committed locally. Would you like me to push to the remote repository?"
+6. Only push if developer confirms
 
 This approach ensures:
 - Continuous progress tracking
 - No lost work due to missed commits
 - Developer control over when changes are shared
 - Clean git history with meaningful commits
+- **Up-to-date documentation that reflects current implementation**
