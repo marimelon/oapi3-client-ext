@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useAppContext } from '../../context/AppContext'
 import { useOpenApi } from '../../hooks/useOpenApi'
 import { useRequest } from '../../hooks/useRequest'
@@ -26,15 +26,17 @@ export default function RequestPanel() {
 
   const selectedEndpoint = state.selectedEndpoint
 
-  const parameterSchema = selectedEndpoint && state.selectedSpec 
-    ? getParameterSchema(state.selectedSpec, selectedEndpoint.path, selectedEndpoint.method)
-    : null
+  const parameterSchema = useMemo(() => {
+    return selectedEndpoint && state.selectedSpec 
+      ? getParameterSchema(state.selectedSpec, selectedEndpoint.path, selectedEndpoint.method)
+      : null
+  }, [selectedEndpoint, state.selectedSpec, getParameterSchema])
 
-
-
-  const requestBodySchema = selectedEndpoint && state.selectedSpec
-    ? getRequestBodySchema(state.selectedSpec, selectedEndpoint.path, selectedEndpoint.method)
-    : null
+  const requestBodySchema = useMemo(() => {
+    return selectedEndpoint && state.selectedSpec
+      ? getRequestBodySchema(state.selectedSpec, selectedEndpoint.path, selectedEndpoint.method)
+      : null
+  }, [selectedEndpoint, state.selectedSpec, getRequestBodySchema])
 
   // URLプレビュー
   const allQueryParams = { ...queryParams, ...customQueryParams }

@@ -311,15 +311,15 @@ export class OpenApiParser {
   // パラメータスキーマ取得
   getParameterSchema(spec: any, path: string, method: string): any {
     try {
-      console.log(`🔍 Getting parameter schema for: ${method} ${path}`)
+      // console.log(`🔍 Getting parameter schema for: ${method} ${path}`)
       const operation = spec.paths?.[path]?.[method.toLowerCase()]
       if (!operation) {
-        console.log('❌ No operation found')
+        // console.log('❌ No operation found')
         return null
       }
 
       const parameters = operation.parameters || []
-      console.log(`📋 Found ${parameters.length} parameters:`, parameters)
+      // console.log(`📋 Found ${parameters.length} parameters:`, parameters)
 
       const schema: {
         path: any[]
@@ -356,7 +356,7 @@ export class OpenApiParser {
                 format: resolvedParam.schema?.format
               }
 
-              console.log(`✅ Processing resolved parameter: ${resolvedParam.name} (${resolvedParam.in})`)
+              // console.log(`✅ Processing resolved parameter: ${resolvedParam.name} (${resolvedParam.in})`)
 
               switch (resolvedParam.in) {
                 case 'path':
@@ -398,7 +398,7 @@ export class OpenApiParser {
           format: param.schema?.format
         }
 
-        console.log(`✅ Processing parameter: ${param.name} (${param.in})`)
+        // console.log(`✅ Processing parameter: ${param.name} (${param.in})`)
 
         switch (param.in) {
           case 'path':
@@ -418,7 +418,7 @@ export class OpenApiParser {
         }
       }
 
-      console.log('📊 Final parameter schema:', schema)
+      // console.log('📊 Final parameter schema:', schema)
       return schema
     } catch (error) {
       console.error('❌ Failed to get parameter schema:', error)
