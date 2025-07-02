@@ -101,7 +101,7 @@ const JsonSyntaxHighlighter: React.FC<JsonSyntaxHighlighterProps> = ({ jsonStrin
   }
 
   return (
-    <pre className={`whitespace-pre-wrap font-mono text-sm ${className}`}>
+    <pre className={`whitespace-pre-wrap font-mono ${className}`} style={{ fontSize: '10px' }}>
       {highlightJson(jsonString)}
     </pre>
   )

@@ -197,7 +197,7 @@ export default function ResponsePanel() {
           <div className="p-3">
             {headersFormatted ? (
               <div className="relative">
-                <pre className="text-xs font-mono text-gray-700 dark:text-gray-300 whitespace-pre-wrap bg-gray-50 dark:bg-gray-700 p-3 rounded overflow-auto max-h-48">
+                <pre className="font-mono text-gray-700 dark:text-gray-300 whitespace-pre-wrap bg-gray-50 dark:bg-gray-700 p-3 rounded overflow-auto max-h-48" style={{ fontSize: '10px' }}>
                   {headersFormatted}
                 </pre>
                 <button
@@ -264,12 +264,12 @@ export default function ResponsePanel() {
           {bodyFormatted ? (
             <div className="relative">
               <div 
-                className="text-xs font-mono text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 p-3 rounded overflow-auto border border-gray-200 dark:border-gray-600"
-                style={{ height: getBodyHeight() }}
+                className="font-mono text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 p-3 rounded overflow-auto border border-gray-200 dark:border-gray-600"
+                style={{ fontSize: '10px', height: getBodyHeight() }}
               >
                 {requestState.result?.data && typeof requestState.result.data === 'object' ? (
                   jsonDisplayMode === 'tree' ? (
-                    <div className="text-sm">
+                    <div style={{ fontSize: '10px' }}>
                       <JsonCollapsibleViewer data={requestState.result.data} />
                     </div>
                   ) : (
@@ -307,7 +307,7 @@ export default function ResponsePanel() {
               </div>
             </div>
           ) : (
-            <p className="text-gray-500 dark:text-gray-400 text-xs">No response body</p>
+            <p className="text-gray-500 dark:text-gray-400" style={{ fontSize: '10px' }}>No response body</p>
           )}
         </div>
       </div>
