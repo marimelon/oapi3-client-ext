@@ -18,10 +18,74 @@ export default function SchemaFieldInput({
   level = 0 
 }: SchemaFieldInputProps) {
   const [isExpanded, setIsExpanded] = useState(true)
+  const [selectedOneOfIndex, setSelectedOneOfIndex] = useState<number>(0)
   
   const indent = level * 16 // px
 
+  const renderOneOfInput = () => {
+    const options = schema.oneOf || []
+    const currentOption = options[selectedOneOfIndex] || options[0]
+    
+    // Generate option labels
+    const getOptionLabel = (option: any, index: number) => {
+      if (option.description) {
+        return `${index + 1}. ${option.description}`
+      }
+      if (option.properties) {
+        const props = Object.keys(option.properties)
+        return `${index + 1}. Object (${props.slice(0, 2).join(', ')}${props.length > 2 ? '...' : ''})`
+      }
+      return `${index + 1}. ${option.type || 'Option'}`
+    }
+
+    return (
+      <div className="space-y-3">
+        {/* Option selector */}
+        <div>
+          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Select schema variant:
+          </label>
+          <select
+            value={selectedOneOfIndex}
+            onChange={(e) => {
+              const newIndex = parseInt(e.target.value)
+              setSelectedOneOfIndex(newIndex)
+              // Reset value when switching schemas
+              onChange(undefined)
+            }}
+            className="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          >
+            {options.map((option: any, index: number) => (
+              <option key={index} value={index}>
+                {getOptionLabel(option, index)}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Render the selected schema */}
+        {currentOption && (
+          <div className="border-l-2 border-blue-200 dark:border-blue-600 pl-4">
+            <SchemaFieldInput
+              name={`${name}_variant`}
+              schema={currentOption}
+              value={value}
+              onChange={onChange}
+              required={required}
+              level={level + 1}
+            />
+          </div>
+        )}
+      </div>
+    )
+  }
+
   const renderInput = () => {
+    // Handle oneOf schemas
+    if (schema.oneOf && Array.isArray(schema.oneOf)) {
+      return renderOneOfInput()
+    }
+
     const type = schema.type || 'string'
 
     switch (type) {
@@ -49,6 +113,8 @@ export default function SchemaFieldInput({
             onChange={(e) => onChange(e.target.value ? Number(e.target.value) : undefined)}
             placeholder={schema.example?.toString() || '0'}
             step={type === 'integer' ? 1 : 'any'}
+            min={schema.minimum}
+            max={schema.maximum}
             className="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
         )
@@ -105,25 +171,27 @@ export default function SchemaFieldInput({
         const properties = schema.properties || {}
         return (
           <div className="space-y-3 border-l-2 border-gray-200 dark:border-gray-600 pl-4">
-            {Object.entries(properties).map(([propName, propSchema]: [string, any]) => (
-              <SchemaFieldInput
-                key={propName}
-                name={propName}
-                schema={propSchema}
-                value={objectValue[propName]}
-                onChange={(newValue) => {
-                  const newObjectValue = { ...objectValue }
-                  if (newValue === undefined || newValue === '') {
-                    delete newObjectValue[propName]
-                  } else {
-                    newObjectValue[propName] = newValue
-                  }
-                  onChange(newObjectValue)
-                }}
-                required={schema.required?.includes(propName)}
-                level={level + 1}
-              />
-            ))}
+            {Object.entries(properties)
+              .filter(([, propSchema]: [string, any]) => !propSchema.readOnly) // Skip readOnly fields
+              .map(([propName, propSchema]: [string, any]) => (
+                <SchemaFieldInput
+                  key={propName}
+                  name={propName}
+                  schema={propSchema}
+                  value={objectValue[propName]}
+                  onChange={(newValue) => {
+                    const newObjectValue = { ...objectValue }
+                    if (newValue === undefined || newValue === '') {
+                      delete newObjectValue[propName]
+                    } else {
+                      newObjectValue[propName] = newValue
+                    }
+                    onChange(newObjectValue)
+                  }}
+                  required={schema.required?.includes(propName)}
+                  level={level + 1}
+                />
+              ))}
           </div>
         )
 
@@ -147,12 +215,18 @@ export default function SchemaFieldInput({
         }
 
         // string type (default)
+        const inputType = schema.format === 'date-time' ? 'datetime-local' : 
+                         schema.format === 'date' ? 'date' :
+                         schema.format === 'url' ? 'url' : 'text'
+        
         return (
           <input
-            type="text"
+            type={inputType}
             value={value || ''}
             onChange={(e) => onChange(e.target.value || undefined)}
             placeholder={schema.example || schema.description || `Enter ${name}`}
+            maxLength={schema.maxLength}
+            minLength={schema.minLength}
             className="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
         )

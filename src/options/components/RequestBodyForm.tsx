@@ -23,24 +23,26 @@ export default function RequestBodyForm({ schema, value, onChange }: RequestBody
     <div className="space-y-4">
       {schema.schema.type === 'object' && schema.schema.properties ? (
         // Object schema - render each property
-        Object.entries(schema.schema.properties).map(([propName, propSchema]: [string, any]) => (
-          <SchemaFieldInput
-            key={propName}
-            name={propName}
-            schema={propSchema}
-            value={value?.[propName]}
-            onChange={(newValue) => {
-              const updatedValue = { ...value }
-              if (newValue === undefined || newValue === '') {
-                delete updatedValue[propName]
-              } else {
-                updatedValue[propName] = newValue
-              }
-              handleRootChange(updatedValue)
-            }}
-            required={schema.schema.required?.includes(propName)}
-          />
-        ))
+        Object.entries(schema.schema.properties)
+          .filter(([, propSchema]: [string, any]) => !propSchema.readOnly) // Skip readOnly fields
+          .map(([propName, propSchema]: [string, any]) => (
+            <SchemaFieldInput
+              key={propName}
+              name={propName}
+              schema={propSchema}
+              value={value?.[propName]}
+              onChange={(newValue) => {
+                const updatedValue = { ...value }
+                if (newValue === undefined || newValue === '') {
+                  delete updatedValue[propName]
+                } else {
+                  updatedValue[propName] = newValue
+                }
+                handleRootChange(updatedValue)
+              }}
+              required={schema.schema.required?.includes(propName)}
+            />
+          ))
       ) : (
         // Non-object schema - render as single field
         <SchemaFieldInput

@@ -21,21 +21,32 @@ export default function RequestBodyEditor({
   const [formValue, setFormValue] = useState<any>({})
   const [rawValue, setRawValue] = useState(value)
 
-  // Resolve $ref references in schema
+  // Recursively resolve $ref references in schema
   const resolvedSchema = useMemo(() => {
     if (!schema || !schema.schema || !state.selectedSpec) {
       return schema
     }
 
-    // If schema contains $ref, try to resolve it
-    if (schema.schema.$ref) {
-      try {
-        // We need to get the full resolved spec and extract our specific schema
-        const fullResolvedSpec: any = state.selectedSpec.spec
-        
-        // Parse the $ref path manually
-        const refPath = schema.schema.$ref
+    const fullResolvedSpec: any = state.selectedSpec.spec
+
+    // Recursive function to resolve $ref references
+    const resolveRefs = (obj: any, visited = new Set<string>()): any => {
+      if (!obj || typeof obj !== 'object') {
+        return obj
+      }
+
+      // Handle $ref
+      if (obj.$ref) {
+        const refPath = obj.$ref
         if (refPath.startsWith('#/')) {
+          // Prevent circular references
+          if (visited.has(refPath)) {
+            console.warn('Circular reference detected:', refPath)
+            return obj
+          }
+
+          visited.add(refPath)
+          
           const pathParts = refPath.substring(2).split('/')
           let resolvedRef: any = fullResolvedSpec
           for (const part of pathParts) {
@@ -48,18 +59,37 @@ export default function RequestBodyEditor({
           }
           
           if (resolvedRef) {
-            return {
-              ...schema,
-              schema: resolvedRef
-            }
+            // Recursively resolve the resolved reference
+            return resolveRefs(resolvedRef, new Set(visited))
           }
         }
-      } catch (error) {
-        console.warn('Failed to resolve $ref:', error)
+        return obj
       }
+
+      // Handle arrays
+      if (Array.isArray(obj)) {
+        return obj.map((item: any) => resolveRefs(item, new Set(visited)))
+      }
+
+      // Handle objects - recursively resolve properties
+      const resolved: any = {}
+      for (const [key, value] of Object.entries(obj)) {
+        resolved[key] = resolveRefs(value, new Set(visited))
+      }
+      
+      return resolved
     }
 
-    return schema
+    try {
+      const resolvedSchemaObj = resolveRefs(schema.schema)
+      return {
+        ...schema,
+        schema: resolvedSchemaObj
+      }
+    } catch (error) {
+      console.warn('Failed to resolve $ref references:', error)
+      return schema
+    }
   }, [schema, state.selectedSpec])
 
   // Initialize form value from JSON string
