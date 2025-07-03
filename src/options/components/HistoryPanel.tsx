@@ -5,6 +5,24 @@ import { getMethodColor, getStatusColor, formatDate } from '../../lib/utils'
 // 履歴データの正規化とバリデーション
 const normalizeHistoryItem = (history: any) => {
   try {
+    // タイムスタンプを安全に変換するヘルパー関数
+    const safeDate = (value: any): Date => {
+      if (!value) return new Date()
+      
+      try {
+        const date = new Date(value)
+        // 無効な日付をチェック
+        if (isNaN(date.getTime())) {
+          console.warn('Invalid timestamp detected, using current time:', value)
+          return new Date()
+        }
+        return date
+      } catch (error) {
+        console.warn('Error parsing timestamp, using current time:', value, error)
+        return new Date()
+      }
+    }
+    
     return {
       id: history.id || 'unknown',
       specId: history.specId || '',
@@ -22,9 +40,9 @@ const normalizeHistoryItem = (history: any) => {
         status: history.response?.status || 0,
         headers: history.response?.headers || {},
         body: history.response?.body || null,
-        timestamp: history.response?.timestamp ? new Date(history.response.timestamp) : new Date()
+        timestamp: safeDate(history.response?.timestamp)
       },
-      timestamp: history.timestamp ? new Date(history.timestamp) : new Date()
+      timestamp: safeDate(history.timestamp)
     }
   } catch (error) {
     console.warn('Invalid history item detected:', error, history)
