@@ -7,7 +7,7 @@ export default function ObjectInput({ schema, value, onChange, level = 0 }: Sche
   const properties = schema.properties || {}
 
   return (
-    <div className={`space-y-3 ${BORDER_CLASSES.object}`}>
+    <div className={`space-y-2 ${BORDER_CLASSES.object}`}>
       {Object.entries(properties)
         .filter(([, propSchema]: [string, any]) => !propSchema.readOnly) // Skip readOnly fields
         .map(([propName, propSchema]: [string, any]) => (

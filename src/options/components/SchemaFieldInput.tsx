@@ -75,35 +75,35 @@ export default function SchemaFieldInput({
 
   return (
     <div style={{ marginLeft: `${indent}px` }}>
-      <div className="flex items-center gap-2 mb-2">
+      <div className="flex items-center gap-1.5 mb-1">
         {shouldCollapse && (
           <button
             type="button"
             onClick={() => setIsExpanded(!isExpanded)}
-            className="w-4 h-4 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+            className="w-3 h-3 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-xs"
           >
             {isExpanded ? '▼' : '▶'}
           </button>
         )}
-        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-          {name}
-          {required && <span className="text-red-500 ml-1">*</span>}
-          <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">
+        <label className="text-xs font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+          <span>{name}</span>
+          {required && <span className="text-red-500">*</span>}
+          <span className="text-xs text-gray-500 dark:text-gray-400">
             ({schema.type || 'string'})
           </span>
-        </label>
-        {schema.description && (
-          <div className="group relative">
-            <span className="text-gray-400 cursor-help">?</span>
-            <div className="invisible group-hover:visible absolute z-10 w-64 p-2 mt-1 text-xs text-white bg-gray-900 rounded shadow-lg">
-              {schema.description}
+          {schema.description && (
+            <div className="group relative">
+              <span className="text-gray-400 cursor-help text-xs">?</span>
+              <div className="invisible group-hover:visible absolute z-10 w-64 p-2 mt-1 text-xs text-white bg-gray-900 rounded shadow-lg left-0">
+                {schema.description}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </label>
       </div>
       
       {(!shouldCollapse || isExpanded) && (
-        <div className="mb-3">
+        <div className="mb-2">
           {renderInput()}
         </div>
       )}
