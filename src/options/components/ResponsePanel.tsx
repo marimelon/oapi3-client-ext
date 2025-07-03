@@ -1,12 +1,13 @@
-import React, { useState, useRef, useCallback } from 'react'
+import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react'
 import { useRequest } from '../../hooks/useRequest'
 import { useMultiCopyToClipboard } from '../../hooks/useCopyToClipboard'
+import { useJq } from '../../hooks/useJq'
 import { getStatusColor } from '../../lib/utils'
 import JsonCollapsibleViewer from '../../components/JsonCollapsibleViewer'
 import JsonSyntaxHighlighter from '../../components/JsonSyntaxHighlighter'
 
 type ViewMode = 'compact' | 'expanded' | 'full'
-type JsonDisplayMode = 'tree' | 'raw'
+type JsonDisplayMode = 'tree' | 'raw' | 'jq'
 
 export default function ResponsePanel() {
   const { requestState, formatResponse } = useRequest()
@@ -16,8 +17,10 @@ export default function ResponsePanel() {
   const [jsonDisplayMode, setJsonDisplayMode] = useState<JsonDisplayMode>('tree')
   const [bodyHeight, setBodyHeight] = useState(400)
   const [isResizing, setIsResizing] = useState(false)
+  const [jqQuery, setJqQuery] = useState('')
   const resizeRef = useRef<HTMLDivElement>(null)
   const { copyToClipboard, isCopied } = useMultiCopyToClipboard()
+  const { processQuery, isReady } = useJq()
 
   const handleCopy = (text: string, itemId: string) => {
     copyToClipboard(text, itemId)
@@ -101,6 +104,39 @@ export default function ResponsePanel() {
   }
 
   const { statusInfo, headersFormatted, bodyFormatted } = formatResponse(requestState.result)
+
+  const [jqResult, setJqResult] = useState<{data: any, error: string | null}>({data: null, error: null})
+  const [jqProcessing, setJqProcessing] = useState(false)
+
+  const processJqQuery = useCallback(async (query: string) => {
+    if (!requestState.result?.data || !isReady) return
+    
+    setJqProcessing(true)
+    try {
+      const result = await processQuery(requestState.result.data, query)
+      setJqResult({data: result.data, error: result.error})
+    } catch (error) {
+      setJqResult({data: null, error: error instanceof Error ? error.message : 'Unknown error'})
+    } finally {
+      setJqProcessing(false)
+    }
+  }, [requestState.result?.data, processQuery, isReady])
+
+  useEffect(() => {
+    if (jsonDisplayMode === 'jq' && jqQuery.trim()) {
+      const timeoutId = setTimeout(() => {
+        processJqQuery(jqQuery)
+      }, 300) // debounce
+      return () => clearTimeout(timeoutId)
+    }
+  }, [jqQuery, jsonDisplayMode, processJqQuery])
+
+  const displayData = useMemo(() => {
+    if (jsonDisplayMode === 'jq') {
+      return jqResult.data
+    }
+    return requestState.result?.data
+  }, [jsonDisplayMode, jqResult.data, requestState.result?.data])
 
   return (
     <div className="p-3 space-y-3">
@@ -228,7 +264,7 @@ export default function ResponsePanel() {
                 <div className="flex items-center space-x-1 border border-gray-300 dark:border-gray-600 rounded">
                   <button
                     onClick={() => setJsonDisplayMode('tree')}
-                    className={`px-2 py-1 text-xs rounded-l transition-colors ${
+                    className={`px-2 py-1 text-xs transition-colors ${
                       jsonDisplayMode === 'tree'
                         ? 'bg-blue-500 text-white'
                         : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600'
@@ -238,13 +274,24 @@ export default function ResponsePanel() {
                   </button>
                   <button
                     onClick={() => setJsonDisplayMode('raw')}
-                    className={`px-2 py-1 text-xs rounded-r transition-colors ${
+                    className={`px-2 py-1 text-xs transition-colors ${
                       jsonDisplayMode === 'raw'
                         ? 'bg-blue-500 text-white'
                         : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600'
                     }`}
                   >
                     Raw
+                  </button>
+                  <button
+                    onClick={() => setJsonDisplayMode('jq')}
+                    className={`px-2 py-1 text-xs rounded-r transition-colors ${
+                      jsonDisplayMode === 'jq'
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600'
+                    }`}
+                    disabled={!isReady}
+                  >
+                    jq
                   </button>
                 </div>
               )}
@@ -261,6 +308,37 @@ export default function ResponsePanel() {
           </div>
         </div>
         <div className="p-3" ref={resizeRef}>
+          {/* jq入力フィールド */}
+          {jsonDisplayMode === 'jq' && requestState.result?.data && typeof requestState.result.data === 'object' && (
+            <div className="mb-3 space-y-2">
+              <div className="flex items-center space-x-2">
+                <label htmlFor="jq-query" className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                  jq Query:
+                </label>
+                {!isReady && (
+                  <span className="text-xs text-yellow-600 dark:text-yellow-400">Initializing jq...</span>
+                )}
+                {jqProcessing && (
+                  <span className="text-xs text-blue-600 dark:text-blue-400">Processing...</span>
+                )}
+              </div>
+              <input
+                id="jq-query"
+                type="text"
+                value={jqQuery}
+                onChange={(e) => setJqQuery(e.target.value)}
+                placeholder="e.g., .items[] | select(.status == &quot;active&quot;)"
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                disabled={!isReady}
+              />
+              {jqResult.error && (
+                <div className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-2 rounded">
+                  {jqResult.error}
+                </div>
+              )}
+            </div>
+          )}
+          
           {bodyFormatted ? (
             <div className="relative">
               <div 
@@ -270,8 +348,18 @@ export default function ResponsePanel() {
                 {requestState.result?.data && typeof requestState.result.data === 'object' ? (
                   jsonDisplayMode === 'tree' ? (
                     <div style={{ fontSize: '10px' }}>
-                      <JsonCollapsibleViewer data={requestState.result.data} />
+                      <JsonCollapsibleViewer data={displayData} />
                     </div>
+                  ) : jsonDisplayMode === 'jq' ? (
+                    displayData !== null ? (
+                      <div style={{ fontSize: '10px' }}>
+                        <JsonCollapsibleViewer data={displayData} />
+                      </div>
+                    ) : (
+                      <div className="text-gray-500 dark:text-gray-400 text-center py-8">
+                        {jqQuery.trim() ? 'No results' : 'Enter a jq query to filter the data'}
+                      </div>
+                    )
                   ) : (
                     <JsonSyntaxHighlighter jsonString={bodyFormatted} />
                   )
@@ -295,7 +383,12 @@ export default function ResponsePanel() {
               
               <div className="absolute top-1 right-1 flex space-x-1">
                 <button
-                  onClick={() => handleCopy(bodyFormatted, 'body')}
+                  onClick={() => {
+                    const copyData = jsonDisplayMode === 'jq' && displayData !== null 
+                      ? JSON.stringify(displayData, null, 2) 
+                      : bodyFormatted
+                    handleCopy(copyData, 'body')
+                  }}
                   className={`px-2 py-1 border rounded text-xs transition-colors ${
                     isCopied('body')
                       ? 'bg-green-100 dark:bg-green-900 border-green-300 dark:border-green-700 text-green-700 dark:text-green-300'
