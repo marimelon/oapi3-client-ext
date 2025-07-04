@@ -29,7 +29,15 @@ export default defineManifest({
   },
   
   content_security_policy: {
-    extension_pages: "script-src 'self'; object-src 'self'"
+    extension_pages: "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
   },
+  
+  web_accessible_resources: [
+    {
+      resources: ['assets/jq.wasm', 'assets/jq.wasm.wasm', 'assets/jq.asm.js', 'assets/jq.asm.js.mem', 'assets/*.wasm', 'assets/*.js', 'assets/*.mem'],
+      matches: ['<all_urls>'],
+      use_dynamic_url: false
+    }
+  ],
   
 })

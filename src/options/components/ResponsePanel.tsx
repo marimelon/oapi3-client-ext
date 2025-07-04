@@ -18,10 +18,13 @@ export default function ResponsePanel() {
   const [bodyHeight, setBodyHeight] = useState(400)
   const [isResizing, setIsResizing] = useState(false)
   const [jqQuery, setJqQuery] = useState('')
+  const [jqResult, setJqResult] = useState<{data: any, error: string | null}>({data: null, error: null})
+  const [jqProcessing, setJqProcessing] = useState(false)
   const resizeRef = useRef<HTMLDivElement>(null)
   const { copyToClipboard, isCopied } = useMultiCopyToClipboard()
   const { processQuery, isReady } = useJq()
 
+  // All hooks and callbacks must be defined before any early returns
   const handleCopy = (text: string, itemId: string) => {
     copyToClipboard(text, itemId)
   }
@@ -45,6 +48,27 @@ export default function ResponsePanel() {
     setIsResizing(false)
   }, [])
 
+  const processJqQuery = useCallback(async (query: string) => {
+    if (!requestState.result?.data || !isReady) return
+    
+    setJqProcessing(true)
+    try {
+      const result = await processQuery(requestState.result.data, query)
+      setJqResult({data: result.data, error: result.error})
+    } catch (error) {
+      setJqResult({data: null, error: error instanceof Error ? error.message : 'Unknown error'})
+    } finally {
+      setJqProcessing(false)
+    }
+  }, [requestState.result?.data, processQuery, isReady])
+
+  const displayData = useMemo(() => {
+    if (jsonDisplayMode === 'jq') {
+      return jqResult.data
+    }
+    return requestState.result?.data
+  }, [jsonDisplayMode, jqResult.data, requestState.result?.data])
+
   React.useEffect(() => {
     if (isResizing) {
       document.addEventListener('mousemove', handleMouseMove)
@@ -55,6 +79,15 @@ export default function ResponsePanel() {
       }
     }
   }, [isResizing, handleMouseMove, handleMouseUp])
+
+  useEffect(() => {
+    if (jsonDisplayMode === 'jq' && jqQuery.trim()) {
+      const timeoutId = setTimeout(() => {
+        processJqQuery(jqQuery)
+      }, 300) // debounce
+      return () => clearTimeout(timeoutId)
+    }
+  }, [jqQuery, jsonDisplayMode, processJqQuery])
 
   const getBodyHeight = () => {
     switch (viewMode) {
@@ -104,39 +137,6 @@ export default function ResponsePanel() {
   }
 
   const { statusInfo, headersFormatted, bodyFormatted } = formatResponse(requestState.result)
-
-  const [jqResult, setJqResult] = useState<{data: any, error: string | null}>({data: null, error: null})
-  const [jqProcessing, setJqProcessing] = useState(false)
-
-  const processJqQuery = useCallback(async (query: string) => {
-    if (!requestState.result?.data || !isReady) return
-    
-    setJqProcessing(true)
-    try {
-      const result = await processQuery(requestState.result.data, query)
-      setJqResult({data: result.data, error: result.error})
-    } catch (error) {
-      setJqResult({data: null, error: error instanceof Error ? error.message : 'Unknown error'})
-    } finally {
-      setJqProcessing(false)
-    }
-  }, [requestState.result?.data, processQuery, isReady])
-
-  useEffect(() => {
-    if (jsonDisplayMode === 'jq' && jqQuery.trim()) {
-      const timeoutId = setTimeout(() => {
-        processJqQuery(jqQuery)
-      }, 300) // debounce
-      return () => clearTimeout(timeoutId)
-    }
-  }, [jqQuery, jsonDisplayMode, processJqQuery])
-
-  const displayData = useMemo(() => {
-    if (jsonDisplayMode === 'jq') {
-      return jqResult.data
-    }
-    return requestState.result?.data
-  }, [jsonDisplayMode, jqResult.data, requestState.result?.data])
 
   return (
     <div className="p-3 space-y-3">
