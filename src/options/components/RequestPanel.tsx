@@ -78,18 +78,16 @@ export default function RequestPanel() {
     return { valid: missing.length === 0, missing }
   })() : { valid: true, missing: [] }
 
-  // エンドポイント変更時にパラメータをリセットと保存されたリクエストを読み込み
+  // エンドポイント変更時に自動的にパスとメソッドを更新し、保存されたリクエストを読み込み
   useEffect(() => {
     if (!selectedEndpoint) return
 
-    // 保存されたリクエストを読み込み
-    loadSavedRequest()
+    // 1. まずエンドポイントの情報を自動設定
+    setCustomUrlPath(selectedEndpoint.path || '')
+    setCustomMethod(selectedEndpoint.method || 'GET')
 
-    // エンドポイントが変更された時のみカスタムURLを更新（空の場合のみ）
-    if (!customUrlPath) {
-      setCustomUrlPath(selectedEndpoint.path || '')
-      setCustomMethod(selectedEndpoint.method || 'GET')
-    }
+    // 2. 保存されたリクエストを読み込み（これにより上書きされる可能性がある）
+    loadSavedRequest()
   }, [selectedEndpoint])
 
   // 保存されたリクエストがない場合のみサンプルデータを生成
@@ -420,8 +418,9 @@ export default function RequestPanel() {
                     setCustomMethod(selectedEndpoint.method)
                   }}
                   className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                  title="Reset to original API specification path and method"
                 >
-                  Use API Spec
+                  Reset to Spec
                 </button>
                 {hasSavedRequest && (
                   <span className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded">
