@@ -8,7 +8,6 @@ export default defineManifest({
   
   permissions: [
     'storage',
-    'activeTab',
     'declarativeNetRequest'
   ],
   
