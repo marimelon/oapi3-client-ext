@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "postinstall": "npm run copy-jq-assets",
+    "copy-jq-assets": "mkdir -p public/assets && cp node_modules/jq-web/jq.asm.js public/assets/ && cp node_modules/jq-web/jq.asm.js.mem public/assets/"
   },
   "dependencies": {
     "jq-web": "^0.5.1",
