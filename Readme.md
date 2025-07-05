@@ -1,237 +1,318 @@
 # OpenAPI 3 Client Extension
 
-Chrome拡張機能として動作するOpenAPI 3.x仕様対応のAPIクライアント
+A Chrome Extension that provides a comprehensive OpenAPI 3.x API client with advanced features including $ref resolution, jq filtering, and a Podman-like UI. Built with React, TypeScript, and TailwindCSS.
 
-## 特徴
+## Features
 
-### 主な機能
-- **OpenAPI 3.x仕様解析**: JSON/YAMLファイルやURLから仕様を読み込み
-- **環境管理**: 複数の環境（開発、ステージング等）を管理
-- **リクエスト機能**: 
-  - パラメータ自動入力支援
-  - カスタムクエリパラメータ追加
-  - 任意のURLパス実行
-- **レスポンス表示**: ステータス、ヘッダー、ボディの詳細表示
-- **履歴管理**: リクエスト履歴の保存と再実行
-- **ダークモード**: フル対応のダークテーマ
-- **カスタマイズ**: パネル幅の調整と設定保持
+### Core Capabilities
+- **OpenAPI 3.x Support**: Complete JSON/YAML specification parsing and validation
+- **$ref Resolution**: Sophisticated reference resolution with circular reference protection
+- **Environment Management**: Multiple environment support (development, staging, production)
+- **Request Execution**: Full HTTP request capabilities with Chrome extension CORS bypass
+- **Response Processing**: Advanced response handling with multiple visualization modes
+- **History Management**: Comprehensive request history with search and replay functionality
+- **Dark Mode**: Complete dark theme support with system preference detection
 
-### UI特徴
-- **Podman風UI**: リクエストとレスポンスを統合表示
-- **レスポンシブデザイン**: 画面サイズに応じたレイアウト調整
-- **コピー機能**: URL、レスポンスヘッダー、ボディのワンクリックコピー
-- **ダークモード**: TailwindCSSによる完全対応
+### Advanced Features
 
-## 技術構成
+#### Request Body Builder (RapidAPI-style)
+- **Dual Mode Interface**: Switch between form-based and raw JSON editing
+- **Schema-Driven Forms**: Automatic form generation from OpenAPI schemas
+- **Type Support**: All OpenAPI data types (string, number, boolean, array, object, enum)
+- **Nested Structures**: Collapsible sections for complex objects and arrays
+- **Real-time Sync**: Bidirectional synchronization between form and JSON states
+- **Validation**: Required field indicators and schema-based validation
 
-### フロントエンド技術
-- **フレームワーク**: React 18 + TypeScript
-- **ビルドツール**: Vite + CRXJS Vite Plugin
-- **スタイリング**: TailwindCSS
-- **状態管理**: React Context API
-- **ストレージ**: Chrome Storage API
-- **OpenAPI解析**: js-yaml + カスタムパーサー
+#### jq Filtering Capabilities
+- **JSON Query Processing**: Built-in jq-web integration for powerful JSON filtering
+- **Multiple View Modes**: Tree view, Raw JSON, and jq-filtered results
+- **Real-time Processing**: 300ms debounced query execution with error handling
+- **Copy Functionality**: One-click copying of filtered results
+- **Query Examples**: Built-in placeholder examples for common operations
 
-### アーキテクチャ構成
+#### Saved Requests Feature
+- **Auto-Save/Load**: Automatic parameter persistence per API endpoint
+- **Per-Endpoint Storage**: Individual saved configurations for each API operation
+- **Comprehensive Data**: Stores path params, query params, headers, and request body
+- **Status Indicators**: Visual feedback for auto-saved configurations
+- **Spec-Scoped**: Isolated storage per OpenAPI specification
 
-#### ディレクトリ構造
+### UI/UX Features
+
+#### Podman-like Interface
+- **Integrated Layout**: Unified request and response panels
+- **Resizable Panels**: Adjustable sidebar and response panel widths
+- **Responsive Design**: Adaptive layout for different screen sizes
+- **Visual Consistency**: Coherent design language throughout the application
+
+#### Copy Functionality
+- **Multi-Item Support**: Copy URLs, headers, response bodies, and filtered results
+- **Visual Feedback**: Temporary "Copied!" status with 2-second duration
+- **Error Handling**: Graceful fallback for clipboard API failures
+- **Context Awareness**: Smart copying based on content type
+
+## Technical Architecture
+
+### Technology Stack
+- **Frontend**: React 18 + TypeScript
+- **Build System**: Vite + CRXJS Vite Plugin
+- **Styling**: TailwindCSS with dark mode support
+- **State Management**: React Context API with reducer pattern
+- **Storage**: Chrome Storage API
+- **JSON Processing**: jq-web for filtering, js-yaml for parsing
+
+### Component Architecture
 ```
 src/
-├── background/          # Service Worker
-├── options/            # メインアプリケーション
-│   └── components/     # Reactコンポーネント
-├── context/            # React Context状態管理
-├── hooks/              # カスタムフック
-├── lib/                # コアライブラリ
-│   ├── openapi.ts      # OpenAPI解析
-│   ├── request.ts      # HTTPリクエスト
-│   └── utils.ts        # ユーティリティ
-├── types/              # TypeScript型定義
-└── styles/             # スタイルファイル
+├── background/              # Chrome extension service worker
+├── options/                 # Main application
+│   └── components/          # React components
+│       ├── RequestBodyEditor.tsx    # Main request body container
+│       ├── RequestBodyForm.tsx      # Schema-based form generator
+│       ├── SchemaFieldInput.tsx     # Field-specific inputs
+│       ├── ResponsePanel.tsx        # Response display with jq filtering
+│       └── HistoryPanel.tsx         # Request history management
+├── context/                 # React Context state management
+├── hooks/                   # Custom hooks
+│   ├── useJq.ts            # jq integration hook
+│   ├── useOpenApi.ts       # OpenAPI business logic
+│   └── useRequest.ts       # Request execution logic
+├── lib/                     # Core libraries
+│   ├── openapi.ts          # OpenAPI parsing and $ref resolution
+│   ├── request.ts          # HTTP request builder
+│   └── utils.ts            # Utility functions
+├── types/                   # TypeScript type definitions
+└── styles/                  # TailwindCSS styles
 ```
 
-#### 主要コンポーネント
-- **NewApp**: アプリケーションルート
-- **Sidebar**: API仕様一覧、環境選択（リサイズ可能）
-- **RequestPanel**: リクエスト設定パネル
-- **ResponsePanel**: レスポンス表示パネル（折りたたみ対応）
-- **HistoryPanel**: リクエスト履歴管理
+### State Management
+The application uses React Context with reducer pattern for global state management:
 
-### OpenAPI機能
-
-#### $ref参照解決
-- **循環参照対応**: 無限ループ防止機能
-- **深度制限**: 最大50レベルまで解決
-- **キャッシュ機能**: 解決済み参照の再利用
-
-#### パラメータ管理
-- **型サポート**: string, number, boolean, enum対応
-- **バリデーション**: 必須パラメータチェック
-- **パスパラメータ**: URLの`{id}`等を自動抽出
-- **クエリパラメータ**: OpenAPI仕様とカスタム両対応
-
-#### カスタム機能
 ```typescript
-// サポートする入力形式
-- string: テキスト入力
-- number/integer: 数値入力（step="any"対応）
-- boolean: true/false選択
-- enum: ドロップダウン選択
-- array: JSON配列入力（自動フォーマット）
+interface AppState {
+  openApiSpecs: OpenAPISpec[]
+  environments: Environment[]
+  selectedSpec: string | null
+  selectedEnvironment: string | null
+  selectedEndpoint: string | null
+  requestState: {
+    loading: boolean
+    result: RequestResult | null
+    error: string | null
+  }
+  history: HistoryItem[]
+  savedRequests: SavedRequest[]
+}
 ```
 
-## 開発
+### OpenAPI Features
 
-### 環境構築
+#### $ref Resolution Engine
+- **Circular Reference Detection**: Prevents infinite loops with visited reference tracking
+- **Depth Limiting**: Maximum 50 levels to prevent stack overflow
+- **Caching**: Efficient resolution with visited reference cache
+- **Error Handling**: Graceful fallback when references cannot be resolved
+
+#### Parameter Management
+- **Path Parameters**: Automatic extraction from URL templates (`{id}`)
+- **Query Parameters**: Support for both spec-defined and custom parameters
+- **Header Management**: Environment and custom header merging
+- **Request Body**: Comprehensive form and raw JSON editing
+
+#### Custom URL Support
+- **Arbitrary Endpoints**: Execute requests to any URL path
+- **Query Parameter Extraction**: Automatic parsing from URL input
+- **Real-time Preview**: Live URL preview with parameter substitution
+- **Validation**: Parameter validation with user feedback
+
+## Development
+
+### Prerequisites
+- Node.js 22.17.0 (managed via Volta)
+- npm package manager
+
+### Setup
 ```bash
-# 依存関係インストール
+# Install dependencies
 npm install
 
-# 開発モード
+# Development mode
 npm run dev
 
-# ビルド
+# Build extension
 npm run build
 
-# 型チェック
+# Type checking
 npm run type-check
 ```
 
-### Chrome拡張機能のインストール
-1. `npm run build`でビルド実行
-2. Chromeで chrome://extensions/ を開く
-3. 「デベロッパーモード」を有効化
-4. 「パッケージ化されていない拡張機能を読み込む」をクリック
-5. `dist`フォルダを選択
+### Chrome Extension Installation
+1. Run `npm run build` to create the distribution
+2. Open Chrome and navigate to `chrome://extensions/`
+3. Enable "Developer mode"
+4. Click "Load unpacked" and select the `dist` folder
 
-## 使用方法
+## Usage
 
-### 基本的な流れ
+### Basic Workflow
 
-#### 1. API仕様の読み込み
-- **ファイル**: JSON/YAMLファイルをドラッグ&ドロップ
-- **URL**: OpenAPI仕様のURL入力
+#### 1. Load API Specification
+- **File Upload**: Drag and drop JSON/YAML files
+- **URL Import**: Enter OpenAPI specification URL
+- **Validation**: Automatic schema validation and error reporting
 
-#### 2. 環境設定
-- **ベースURL**: API サーバーのベースURL設定
-- **ヘッダー**: 認証情報等の共通ヘッダー
+#### 2. Environment Configuration
+- **Base URL**: Set API server base URL
+- **Headers**: Configure authentication and custom headers
+- **Multiple Environments**: Switch between different API environments
 
-#### 3. エンドポイント選択
-- サイドバーからAPI仕様を展開
-- 実行したいエンドポイントをクリック
+#### 3. Endpoint Selection
+- **Sidebar Navigation**: Browse API specifications and endpoints
+- **Search**: Filter endpoints by method or path
+- **Specification Switching**: Toggle between multiple loaded specs
 
-#### 4. リクエスト設定
-- **パスパラメータ**: 必要な値を入力
-- **クエリパラメータ**: 値を選択・入力
-- **カスタムパラメータ**: 任意のパラメータ追加
-- **リクエストボディ**: JSON形式でデータ入力
+#### 4. Request Configuration
+- **Path Parameters**: Fill required path variables
+- **Query Parameters**: Configure both spec-defined and custom parameters
+- **Request Body**: Use form builder or raw JSON editor
+- **Headers**: Add custom headers or modify existing ones
 
-#### 5. リクエスト実行
-- パス入力フィールド右側の「Send」ボタンをクリック
-- リアルタイムでレスポンス表示
+#### 5. Request Execution
+- **Send Button**: Execute requests with one click
+- **Real-time Response**: Immediate response display
+- **History Tracking**: Automatic request history recording
 
-### 高度な機能
+### Advanced Usage
 
-#### カスタムURL実行
-URL入力フィールドに任意のパスとクエリパラメータを入力可能
+#### Request Body Builder
+- **Form Mode**: Schema-driven form inputs with validation
+- **Raw Mode**: Direct JSON editing with syntax highlighting
+- **Mode Switching**: Seamless conversion between form and JSON
+- **Nested Objects**: Collapsible sections for complex structures
 
-#### パネルリサイズ
-- **サイドバー**: 右端をドラッグして幅調整（200px-600px）
-- **リクエスト/レスポンス**: 境界線をドラッグして分割比率調整（20%-80%）
-- **設定保持**: リロード後も幅設定を保持
+#### jq Filtering
+- **Query Input**: Enter jq expressions for response filtering
+- **Real-time Results**: Live query processing with debouncing
+- **Error Handling**: User-friendly error messages for invalid queries
+- **Copy Results**: One-click copying of filtered data
 
-#### 履歴機能
-- **自動保存**: 実行したリクエストを自動保存
-- **詳細表示**: パラメータ、ヘッダー、ボディの完全な記録
-- **再実行**: 履歴からワンクリック再実行
-- **互換性**: コード更新時の履歴データ互換性対応
+#### Panel Management
+- **Sidebar Resize**: Drag to adjust sidebar width (200px-600px)
+- **Response Panel**: Adjustable response body height
+- **View Modes**: Toggle between tree and raw JSON views
+- **Settings Persistence**: Layout preferences saved automatically
 
-## トラブルシューティング
+## Performance
 
-### よくある問題
+### Optimization Features
+- **Lazy Loading**: Efficient component loading for large API specifications
+- **Debounced Processing**: Optimized jq query execution
+- **Memory Management**: Efficient $ref caching and cleanup
+- **Request Debouncing**: Prevents excessive API calls during parameter changes
 
-#### パラメータが表示されない場合
-1. **原因**:
-   ```javascript
-   // 仕様の確認
-   console.log(parameterSchema?.query) // undefined の場合
-   ```
+### Memory Usage
+- **Small APIs** (< 100 endpoints): ~5MB
+- **Medium APIs** (100-500 endpoints): ~15MB
+- **Large APIs** (500+ endpoints): ~30MB
 
-2. **解決法**:
-   - OpenAPI仕様で`components.parameters`に正しく定義されているか確認
-   - `$ref`参照が正しく解決されているか確認
-   - YAML仕様の文法エラーがないか確認
+## Browser Support
 
-#### $ref参照エラー
-```
-❌ Reference path not found: #/components/parameters/Ids
-```
-**解決法**: 参照先が仕様ファイル内に正しく定義されているか確認
+### Chrome Extension Requirements
+- **Chrome Version**: 88+ (Manifest V3 support)
+- **Permissions**: 
+  - Host permissions for all HTTP/HTTPS requests
+  - Storage API access
+  - Active tab permission
 
-#### 循環参照警告
-```
-⚠️ Circular reference detected: #/components/schemas/CircularSchema
-```
-**対応**: 自動的に循環を回避して処理継続
+### CORS Handling
+Chrome extension permissions bypass CORS restrictions that would normally block web applications, enabling seamless API testing across different domains.
 
-### パフォーマンス
+## Troubleshooting
 
-#### メモリ使用量
-- **小規模API** (< 100エンドポイント): ~5MB
-- **中規模API** (100-500エンドポイント): ~15MB  
-- **大規模API** (500+ エンドポイント): ~30MB
+### Common Issues
 
-#### 最適化機能
-- **遅延レンダリング**: 大量エンドポイントの段階表示
-- **メモ化**: React.memo、useMemo、useCallbackによる最適化
-- **Tree shaking**: 未使用コードの自動除去
+#### Parameters Not Displaying
+**Symptoms**: Parameters don't appear in the UI
+**Solutions**:
+- Verify OpenAPI specification syntax
+- Check that `components.parameters` are properly defined
+- Ensure `$ref` references are correctly resolved
+- Validate YAML/JSON format
 
-## 貢献
+#### $ref Resolution Errors
+**Error**: `Reference path not found: #/components/parameters/ParamName`
+**Solution**: Verify that the referenced component exists in the specification
 
-### 開発参加方法
+#### jq Query Errors
+**Error**: `jq: error: syntax error`
+**Solution**: Check jq query syntax and refer to jq documentation
 
-#### Issue報告
-バグ報告や機能要望の際は以下を含めてください：
-- Chrome バージョン
-- 拡張機能バージョン
-- 再現手順
-- 期待する動作
-- エラーメッセージ
+#### History Panel Issues
+**Error**: `Invalid time value` in history
+**Solution**: History panel automatically handles and recovers from invalid timestamps
 
-#### プルリクエスト
-1. Forkして開発ブランチを作成
-2. 機能実装・バグ修正
-3. テスト実行
-4. プルリクエスト作成
+### Performance Issues
+- **Large Specifications**: Enable lazy loading in settings
+- **Memory Usage**: Clear history periodically for large API sets
+- **Slow Queries**: Optimize jq expressions for better performance
 
-## ライセンス
+## Contributing
+
+### Development Guidelines
+- Follow existing code patterns and conventions
+- Use TypeScript for all new code
+- Implement proper error handling and user feedback
+- Add appropriate tests for new features
+- Update documentation for new functionality
+
+### Issue Reporting
+When reporting issues, include:
+- Chrome version
+- Extension version
+- Steps to reproduce
+- Expected vs actual behavior
+- Console error messages
+- Sample OpenAPI specification (if relevant)
+
+### Pull Request Process
+1. Fork the repository
+2. Create a feature branch
+3. Implement changes with proper testing
+4. Update documentation
+5. Submit pull request with detailed description
+
+## License
 MIT License
 
-## 開発者
-Built with Claude Code Assistant  
-Developed by Marimelon
+## Changelog
+
+### v1.0.0 (Current)
+- ✅ OpenAPI 3.x specification support
+- ✅ Sophisticated $ref resolution with circular reference protection
+- ✅ Request Body Builder with form and raw JSON modes
+- ✅ jq filtering integration with real-time processing
+- ✅ Saved requests with auto-save/load functionality
+- ✅ Comprehensive request history with search and replay
+- ✅ Advanced UI with resizable panels and dark mode
+- ✅ Custom URL and query parameter support
+- ✅ Environment management with header merging
+- ✅ Copy functionality with visual feedback
+- ✅ Chrome Storage API integration
+- ✅ Performance optimizations and error handling
+
+### Upcoming Features
+- 🔄 Bearer Token authentication flows
+- 🔄 File upload support for multipart requests
+- 🔄 Environment variable management
+- 🔄 Request export (cURL, JavaScript, Python)
+- 🔄 GraphQL support
+- 🔄 API mocking capabilities
+- 🔄 Request testing and assertions
+- 🔄 Collection organization and sharing
 
 ---
 
-## 更新履歴
+This project was **almost entirely implemented using Claude Code** (claude.ai/code).
 
-### v1.0.0 (現在)
-- ✅ OpenAPI 3.x仕様対応
-- ✅ $ref参照解決（循環参照対応）
-- ✅ パスパラメータ・クエリパラメータ設定
-- ✅ カスタムURL・パラメータ機能
-- ✅ Podman風UI設計
-- ✅ リクエスト履歴機能
-- ✅ 環境管理機能
-- ✅ ダークモード完全対応
-- ✅ パネルリサイズ機能
-- ✅ コピー機能（フィードバック付き）
-- ✅ Chrome Storage API連携
-- ✅ 履歴データ互換性対応
-
-### 今後の予定
-- 🔄 Bearer Token認証
-- 🔄 ファイルアップロード機能
-- 🔄 環境変数管理
-- 🔄 リクエストのcurl、JavaScript出力
-- 🔄 GraphQL対応
+**Built with Claude Code Assistant**  
+**Developed by Marimelon**

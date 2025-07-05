@@ -1,0 +1,41 @@
+version: 2
+updates:
+  # Enable npm dependency updates
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    groups:
+      # Group all non-major dependency updates together
+      patch-and-minor-updates:
+        update-types:
+          - "minor"
+          - "patch"
+        exclude-patterns:
+          - "react*"
+          - "typescript*"
+          - "vite*"
+      # Group React-related updates
+      react-updates:
+        patterns:
+          - "react*"
+          - "@types/react*"
+      # Group TypeScript-related updates
+      typescript-updates:
+        patterns:
+          - "typescript*"
+          - "@types/*"
+      # Group Vite and build tool updates
+      build-tools:
+        patterns:
+          - "vite*"
+          - "@vitejs/*"
+          - "autoprefixer"
+          - "postcss"
+          - "tailwindcss"
