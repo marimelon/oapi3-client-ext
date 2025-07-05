@@ -62,6 +62,30 @@ export default function ResponsePanel() {
     }
   }, [requestState.result?.data, processQuery, isReady])
 
+  const handlePaste = useCallback((e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault()
+    const input = e.currentTarget
+    const pastedText = e.clipboardData.getData('text')
+    
+    // Normalize whitespace in pasted text
+    const normalizedText = pastedText.replace(/\s+/g, ' ').trim()
+    
+    // Get current cursor position with safe fallbacks
+    const start = input.selectionStart ?? 0
+    const end = input.selectionEnd ?? 0
+    const currentValue = input.value
+    
+    // Insert normalized text at cursor position
+    const newValue = currentValue.substring(0, start) + normalizedText + currentValue.substring(end)
+    setJqQuery(newValue)
+    
+    // Restore cursor position after the pasted text
+    setTimeout(() => {
+      const newCursorPos = start + normalizedText.length
+      input.setSelectionRange(newCursorPos, newCursorPos)
+    }, 0)
+  }, [])
+
   const displayData = useMemo(() => {
     if (jsonDisplayMode === 'jq') {
       return jqResult.data
@@ -327,7 +351,8 @@ export default function ResponsePanel() {
                 type="text"
                 value={jqQuery}
                 onChange={(e) => setJqQuery(e.target.value)}
-                placeholder="e.g., .items[] | select(.status == &quot;active&quot;)"
+                onPaste={handlePaste}
+                placeholder={'e.g., .items[] | select(.status == "active")'}
                 className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
                 disabled={!isReady}
               />
