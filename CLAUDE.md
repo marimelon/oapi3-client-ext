@@ -124,7 +124,7 @@ OpenAPI Schema → Form Generator → User Input (Form) ↔ JSON State ↔ User 
 - **SavedRequest Type**: Stores endpoint-specific parameter configurations
 - **Storage Layer**: Chrome extension local storage with per-spec/endpoint indexing
 - **Auto-loading**: Saved configurations automatically restored when selecting endpoints
-- **Manual Save**: User-triggered save with optional custom naming
+- **Auto-saving**: Request parameters automatically saved when Send button is pressed
 
 **Data Structure:**
 ```typescript
@@ -132,7 +132,7 @@ interface SavedRequest {
   id: string                    // Unique identifier
   specId: string               // OpenAPI specification ID
   endpointKey: string          // '{method}:{path}' format
-  name?: string                // Optional custom name
+  name: string                 // Auto-generated from method + path
   pathParams: Record<string, string>
   queryParams: Record<string, string>  // Includes both spec and custom params
   headers: Record<string, string>
@@ -144,16 +144,15 @@ interface SavedRequest {
 
 **User Experience:**
 - **Automatic Loading**: When selecting an API endpoint, previously saved parameter values are automatically restored
-- **Save Button**: Manual save with visual feedback and success confirmation
-- **Status Indicator**: "Saved" badge shows when current endpoint has saved configuration
-- **Name Customization**: Optional custom names for saved configurations (defaults to method + path)
-- **Reload Function**: Manual reload button to refresh saved configuration
+- **Automatic Saving**: When pressing Send button, current parameter configuration is automatically saved
+- **Status Indicator**: "Auto-saved" badge shows when current endpoint has saved configuration
+- **Seamless Workflow**: No manual save action required - parameters persist automatically
 
 **Storage Management:**
 - **Per-Endpoint Storage**: Each API endpoint can have one saved configuration
 - **Spec-Scoped**: Saved requests are isolated per OpenAPI specification
-- **Automatic Updates**: Saving overwrites existing configuration for the same endpoint
-- **Error Handling**: JSON validation before saving, graceful error recovery
+- **Automatic Updates**: Sending overwrites existing configuration for the same endpoint
+- **Silent Error Handling**: Auto-save errors are logged but don't interrupt request flow
 
 ### Copy Functionality
 - Visual feedback with temporary "Copied!" state (2 seconds)

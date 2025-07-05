@@ -26,8 +26,6 @@ export default function RequestPanel() {
   const [requestBody, setRequestBody] = useState('')
   const [customUrlPath, setCustomUrlPath] = useState('')
   const [customMethod, setCustomMethod] = useState('GET')
-  const [savedRequestName, setSavedRequestName] = useState('')
-  const [isLoadingRequest, setIsLoadingRequest] = useState(false)
   const [hasSavedRequest, setHasSavedRequest] = useState(false)
 
   const selectedEndpoint = state.selectedEndpoint
@@ -96,7 +94,7 @@ export default function RequestPanel() {
 
   // 保存されたリクエストがない場合のみサンプルデータを生成
   useEffect(() => {
-    if (hasSavedRequest || isLoadingRequest) return
+    if (hasSavedRequest) return
 
     // パスパラメータを自動で初期化
     const initialPathParams: Record<string, string> = {}
@@ -117,7 +115,7 @@ export default function RequestPanel() {
         setRequestBody(JSON.stringify(sample, null, 2))
       }
     }
-  }, [selectedEndpoint, requestBodySchema, generateSampleData, hasSavedRequest, isLoadingRequest])
+  }, [selectedEndpoint, requestBodySchema, generateSampleData, hasSavedRequest])
   
   // パスパラメータの変更に対応する別のuseEffect
   useEffect(() => {
@@ -158,6 +156,9 @@ export default function RequestPanel() {
       }
 
       if (state.selectedSpec) {
+        // リクエスト実行前に設定を自動保存
+        await autoSaveRequest()
+        
         await executeRequest(
           state.selectedSpec,
           finalEndpoint,
@@ -302,7 +303,6 @@ export default function RequestPanel() {
   const loadSavedRequest = async () => {
     if (!state.selectedSpec || !selectedEndpoint) return
     
-    setIsLoadingRequest(true)
     try {
       const endpointKey = getEndpointKey(selectedEndpoint.method, selectedEndpoint.path)
       const savedRequest = await getSavedRequestByEndpoint(state.selectedSpec.id, endpointKey)
@@ -314,20 +314,17 @@ export default function RequestPanel() {
         if (savedRequest.body) {
           setRequestBody(typeof savedRequest.body === 'string' ? savedRequest.body : JSON.stringify(savedRequest.body, null, 2))
         }
-        setSavedRequestName(savedRequest.name || '')
         setHasSavedRequest(true)
       } else {
         setHasSavedRequest(false)
       }
     } catch (error) {
       console.error('Failed to load saved request:', error)
-    } finally {
-      setIsLoadingRequest(false)
     }
   }
 
-  // リクエストを保存
-  const saveCurrentRequest = async () => {
+  // リクエストを自動保存
+  const autoSaveRequest = async () => {
     if (!state.selectedSpec || !selectedEndpoint) return
     
     try {
@@ -336,7 +333,7 @@ export default function RequestPanel() {
         id: `${state.selectedSpec.id}_${endpointKey}`,
         specId: state.selectedSpec.id,
         endpointKey,
-        name: savedRequestName || `${selectedEndpoint.method} ${selectedEndpoint.path}`,
+        name: `${selectedEndpoint.method} ${selectedEndpoint.path}`,
         pathParams,
         queryParams: { ...queryParams, ...customQueryParams },
         headers,
@@ -347,14 +344,9 @@ export default function RequestPanel() {
       
       await saveSavedRequest(savedRequest)
       setHasSavedRequest(true)
-      alert('Request saved successfully!')
     } catch (error) {
-      console.error('Failed to save request:', error)
-      if (error instanceof SyntaxError) {
-        alert('Invalid JSON in request body. Please fix the JSON format before saving.')
-      } else {
-        alert('Failed to save request. Please try again.')
-      }
+      console.error('Failed to auto-save request:', error)
+      // 自動保存のエラーは静かに処理（ユーザーにアラートは表示しない）
     }
   }
 
@@ -433,7 +425,7 @@ export default function RequestPanel() {
                 </button>
                 {hasSavedRequest && (
                   <span className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded">
-                    Saved
+                    Auto-saved
                   </span>
                 )}
               </div>
@@ -479,53 +471,6 @@ export default function RequestPanel() {
         </div>
       </div>
 
-      {/* Request Saving Section */}
-      {selectedEndpoint && (
-        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 p-3">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-blue-900 dark:text-blue-100">
-              Save Request Configuration
-            </h3>
-            <div className="flex items-center space-x-2">
-              {isLoadingRequest && (
-                <div className="flex items-center text-xs text-blue-600 dark:text-blue-400">
-                  <svg className="animate-spin -ml-1 mr-1 h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Loading...
-                </div>
-              )}
-              <button
-                onClick={loadSavedRequest}
-                disabled={isLoadingRequest}
-                className="px-2 py-1 text-xs bg-blue-600 dark:bg-blue-700 text-white rounded hover:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50"
-              >
-                Reload
-              </button>
-              <button
-                onClick={saveCurrentRequest}
-                disabled={isLoadingRequest}
-                className="px-2 py-1 text-xs bg-green-600 dark:bg-green-700 text-white rounded hover:bg-green-700 dark:hover:bg-green-600 disabled:opacity-50"
-              >
-                Save
-              </button>
-            </div>
-          </div>
-          <div className="flex items-center space-x-2">
-            <input
-              type="text"
-              value={savedRequestName}
-              onChange={(e) => setSavedRequestName(e.target.value)}
-              placeholder={selectedEndpoint ? `${selectedEndpoint.method} ${selectedEndpoint.path}` : 'Request name (optional)'}
-              className="flex-1 px-2 py-1 border border-blue-300 dark:border-blue-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
-          </div>
-          <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
-            Save current parameter values to automatically restore them when selecting this API endpoint.
-          </p>
-        </div>
-      )}
 
       <div className="space-y-3">
         {/* パスパラメータ */}
