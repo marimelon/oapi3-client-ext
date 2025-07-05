@@ -35,15 +35,25 @@ export default function Sidebar() {
 
   const toggleApiExpansion = (apiId: string, event: React.MouseEvent) => {
     event.stopPropagation()
-    setExpandedApis(prev => {
-      const newSet = new Set(prev)
-      if (newSet.has(apiId)) {
-        newSet.delete(apiId)
-      } else {
-        newSet.add(apiId)
-      }
-      return newSet
-    })
+    
+    // APIを選択していない場合は選択する
+    const spec = state.openApiSpecs.find(s => s.id === apiId)
+    if (spec && state.selectedSpec?.id !== apiId) {
+      handleApiSelect(spec)
+      // 新しく選択されたAPIは自動的に展開する
+      setExpandedApis(prev => new Set([...prev, apiId]))
+    } else {
+      // 既に選択されている場合は展開状態を切り替え
+      setExpandedApis(prev => {
+        const newSet = new Set(prev)
+        if (newSet.has(apiId)) {
+          newSet.delete(apiId)
+        } else {
+          newSet.add(apiId)
+        }
+        return newSet
+      })
+    }
   }
 
   const filteredEndpoints = endpoints.filter(endpoint => {
