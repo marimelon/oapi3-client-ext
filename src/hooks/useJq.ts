@@ -15,19 +15,34 @@ export function useJq() {
       try {
         console.log('Initializing jq in frontend using script injection...')
         
-        // Create script element to load jq.asm.js
+        // Create script element to load jq.js
         const script = document.createElement('script')
-        script.src = chrome.runtime.getURL('assets/jq.asm.js')
+        script.src = chrome.runtime.getURL('assets/jq.js')
         script.async = false // Load synchronously to ensure proper initialization
         
         script.onload = () => {
-          console.log('jq asm.js script loaded')
+          console.log('jq.js script loaded')
           
           // jq should now be available in global scope
           if (typeof (window as any).jq !== 'undefined') {
-            setJqInstance((window as any).jq)
-            setIsReady(true)
-            console.log('jq initialized successfully in frontend')
+            // jq-web 0.6.x uses Promise-based API
+            const jq = (window as any).jq
+            if (typeof jq.then === 'function') {
+              // Handle Promise-based initialization
+              jq.then((jqInstance: any) => {
+                setJqInstance(jqInstance)
+                setIsReady(true)
+                console.log('jq initialized successfully in frontend')
+              }).catch((error: any) => {
+                console.error('jq initialization failed:', error)
+                setIsReady(false)
+              })
+            } else {
+              // Fallback for direct instance
+              setJqInstance(jq)
+              setIsReady(true)
+              console.log('jq initialized successfully in frontend')
+            }
           } else {
             console.error('jq not found in global scope after script load')
             setIsReady(false)
@@ -78,8 +93,8 @@ export function useJq() {
     try {
       console.log('Processing jq query in frontend:', query)
       
-      // Use jq directly in frontend
-      const result = jqInstance.json(data, query)
+      // Use jq with new API - jq-web 0.6.x uses Promise-based json method
+      const result = await jqInstance.json(data, query)
       console.log('jq result:', result)
       
       return {

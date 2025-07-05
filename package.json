@@ -9,10 +9,10 @@
     "preview": "vite preview",
     "type-check": "tsc --noEmit",
     "postinstall": "npm run copy-jq-assets",
-    "copy-jq-assets": "mkdir -p public/assets && cp node_modules/jq-web/jq.asm.js public/assets/ && cp node_modules/jq-web/jq.asm.js.mem public/assets/"
+    "copy-jq-assets": "mkdir -p public/assets && cp node_modules/jq-web/jq.js public/assets/ && cp node_modules/jq-web/jq.wasm public/assets/"
   },
   "dependencies": {
-    "jq-web": "^0.5.1",
+    "jq-web": "^0.6.2",
     "js-yaml": "^4.1.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

@@ -34,7 +34,7 @@ export default defineManifest({
   
   web_accessible_resources: [
     {
-      resources: ['assets/jq.asm.js', 'assets/jq.asm.js.mem'],
+      resources: ['assets/jq.js', 'assets/jq.wasm'],
       matches: ['<all_urls>'],
       use_dynamic_url: false
     }
