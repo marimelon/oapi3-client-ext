@@ -10,6 +10,7 @@ export const STORAGE_CONSTANTS = {
     API_SPECS: 'apiSpecs',
     ENVIRONMENTS: 'environments',
     REQUEST_HISTORY: 'requestHistory',
+    SAVED_REQUESTS: 'savedRequests',
   },
 } as const;
 

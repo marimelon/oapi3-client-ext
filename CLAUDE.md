@@ -117,6 +117,44 @@ OpenAPI Schema → Form Generator → User Input (Form) ↔ JSON State ↔ User 
 5. HTTP request via fetch API with Chrome extension permissions
 6. Response processing and history storage
 
+### Saved Requests Feature
+**Per-API Request Input Persistence**: Automatically save and restore request parameters for each API endpoint.
+
+**Architecture:**
+- **SavedRequest Type**: Stores endpoint-specific parameter configurations
+- **Storage Layer**: Chrome extension local storage with per-spec/endpoint indexing
+- **Auto-loading**: Saved configurations automatically restored when selecting endpoints
+- **Manual Save**: User-triggered save with optional custom naming
+
+**Data Structure:**
+```typescript
+interface SavedRequest {
+  id: string                    // Unique identifier
+  specId: string               // OpenAPI specification ID
+  endpointKey: string          // '{method}:{path}' format
+  name?: string                // Optional custom name
+  pathParams: Record<string, string>
+  queryParams: Record<string, string>  // Includes both spec and custom params
+  headers: Record<string, string>
+  body?: any                   // JSON request body
+  createdAt: Date
+  updatedAt: Date
+}
+```
+
+**User Experience:**
+- **Automatic Loading**: When selecting an API endpoint, previously saved parameter values are automatically restored
+- **Save Button**: Manual save with visual feedback and success confirmation
+- **Status Indicator**: "Saved" badge shows when current endpoint has saved configuration
+- **Name Customization**: Optional custom names for saved configurations (defaults to method + path)
+- **Reload Function**: Manual reload button to refresh saved configuration
+
+**Storage Management:**
+- **Per-Endpoint Storage**: Each API endpoint can have one saved configuration
+- **Spec-Scoped**: Saved requests are isolated per OpenAPI specification
+- **Automatic Updates**: Saving overwrites existing configuration for the same endpoint
+- **Error Handling**: JSON validation before saving, graceful error recovery
+
 ### Copy Functionality
 - Visual feedback with temporary "Copied!" state (2 seconds)
 - Proper error handling for clipboard API failures

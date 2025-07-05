@@ -1,4 +1,4 @@
-import { OpenAPISpec, Environment, RequestHistory } from '../types'
+import { OpenAPISpec, Environment, RequestHistory, SavedRequest } from '../types'
 import { STORAGE_CONSTANTS } from './constants'
 
 export class StorageManager {
@@ -169,6 +169,66 @@ export class StorageManager {
     } catch (error) {
       console.error('Failed to get storage usage:', error)
       return { used: 0, quota: 0 }
+    }
+  }
+
+  // 保存されたリクエストの管理
+  async saveSavedRequest(savedRequest: SavedRequest): Promise<void> {
+    try {
+      const savedRequests = await this.getSavedRequests()
+      const existingIndex = savedRequests.findIndex(req => req.id === savedRequest.id)
+      
+      if (existingIndex >= 0) {
+        savedRequests[existingIndex] = { ...savedRequest, updatedAt: new Date() }
+      } else {
+        savedRequests.push(savedRequest)
+      }
+      
+      await chrome.storage.local.set({ [STORAGE_CONSTANTS.STORAGE_KEYS.SAVED_REQUESTS]: savedRequests })
+    } catch (error) {
+      console.error('Failed to save request:', error)
+      throw new Error('Failed to save request')
+    }
+  }
+
+  async getSavedRequests(): Promise<SavedRequest[]> {
+    try {
+      const result = await chrome.storage.local.get([STORAGE_CONSTANTS.STORAGE_KEYS.SAVED_REQUESTS])
+      return result[STORAGE_CONSTANTS.STORAGE_KEYS.SAVED_REQUESTS] || []
+    } catch (error) {
+      console.error('Failed to get saved requests:', error)
+      return []
+    }
+  }
+
+  async getSavedRequestsBySpec(specId: string): Promise<SavedRequest[]> {
+    try {
+      const savedRequests = await this.getSavedRequests()
+      return savedRequests.filter(req => req.specId === specId)
+    } catch (error) {
+      console.error('Failed to get saved requests by spec:', error)
+      return []
+    }
+  }
+
+  async getSavedRequestByEndpoint(specId: string, endpointKey: string): Promise<SavedRequest | null> {
+    try {
+      const savedRequests = await this.getSavedRequests()
+      return savedRequests.find(req => req.specId === specId && req.endpointKey === endpointKey) || null
+    } catch (error) {
+      console.error('Failed to get saved request by endpoint:', error)
+      return null
+    }
+  }
+
+  async deleteSavedRequest(id: string): Promise<void> {
+    try {
+      const savedRequests = await this.getSavedRequests()
+      const filteredRequests = savedRequests.filter(req => req.id !== id)
+      await chrome.storage.local.set({ [STORAGE_CONSTANTS.STORAGE_KEYS.SAVED_REQUESTS]: filteredRequests })
+    } catch (error) {
+      console.error('Failed to delete saved request:', error)
+      throw new Error('Failed to delete saved request')
     }
   }
 

@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 import { StorageManager } from '../lib/storage'
-import { OpenAPISpec, Environment, RequestHistory } from '../types'
+import { OpenAPISpec, Environment, RequestHistory, SavedRequest } from '../types'
 import { useAppContext } from '../context/AppContext'
 
 export function useStorage() {
@@ -138,6 +138,50 @@ export function useStorage() {
     }
   }, [dispatch, storage])
 
+  // 保存されたリクエストの操作
+  const saveSavedRequest = useCallback(async (savedRequest: SavedRequest) => {
+    try {
+      await storage.saveSavedRequest(savedRequest)
+    } catch (error) {
+      dispatch({ type: 'SET_ERROR', payload: error instanceof Error ? error.message : 'Failed to save request' })
+    }
+  }, [dispatch, storage])
+
+  const getSavedRequests = useCallback(async () => {
+    try {
+      return await storage.getSavedRequests()
+    } catch (error) {
+      dispatch({ type: 'SET_ERROR', payload: error instanceof Error ? error.message : 'Failed to get saved requests' })
+      return []
+    }
+  }, [dispatch, storage])
+
+  const getSavedRequestsBySpec = useCallback(async (specId: string) => {
+    try {
+      return await storage.getSavedRequestsBySpec(specId)
+    } catch (error) {
+      dispatch({ type: 'SET_ERROR', payload: error instanceof Error ? error.message : 'Failed to get saved requests by spec' })
+      return []
+    }
+  }, [dispatch, storage])
+
+  const getSavedRequestByEndpoint = useCallback(async (specId: string, endpointKey: string) => {
+    try {
+      return await storage.getSavedRequestByEndpoint(specId, endpointKey)
+    } catch (error) {
+      dispatch({ type: 'SET_ERROR', payload: error instanceof Error ? error.message : 'Failed to get saved request by endpoint' })
+      return null
+    }
+  }, [dispatch, storage])
+
+  const deleteSavedRequest = useCallback(async (id: string) => {
+    try {
+      await storage.deleteSavedRequest(id)
+    } catch (error) {
+      dispatch({ type: 'SET_ERROR', payload: error instanceof Error ? error.message : 'Failed to delete saved request' })
+    }
+  }, [dispatch, storage])
+
   return {
     // OpenAPI仕様
     loadOpenApiSpecs,
@@ -154,6 +198,13 @@ export function useStorage() {
     loadRequestHistory,
     saveRequestHistory,
     clearRequestHistory,
+    
+    // 保存されたリクエスト
+    saveSavedRequest,
+    getSavedRequests,
+    getSavedRequestsBySpec,
+    getSavedRequestByEndpoint,
+    deleteSavedRequest,
     
     // 初期化
     initializeStorage

@@ -2,8 +2,9 @@ import { useState, useEffect, useMemo } from 'react'
 import { useAppContext } from '../../context/AppContext'
 import { useOpenApi } from '../../hooks/useOpenApi'
 import { useRequest } from '../../hooks/useRequest'
+import { useStorage } from '../../hooks/useStorage'
 import { useCopyToClipboard } from '../../hooks/useCopyToClipboard'
-import { HttpMethod } from '../../types'
+import { HttpMethod, SavedRequest } from '../../types'
 import { 
   extractPathParameters, 
   validatePathParameters, 
@@ -15,6 +16,7 @@ export default function RequestPanel() {
   const { state } = useAppContext()
   const { getParameterSchema, getRequestBodySchema, generateSampleData } = useOpenApi()
   const { executeRequest, requestState } = useRequest()
+  const { saveSavedRequest, getSavedRequestByEndpoint } = useStorage()
   const { copied: copiedUrl, copyToClipboard } = useCopyToClipboard()
   
   const [pathParams, setPathParams] = useState<Record<string, string>>({})
@@ -24,6 +26,9 @@ export default function RequestPanel() {
   const [requestBody, setRequestBody] = useState('')
   const [customUrlPath, setCustomUrlPath] = useState('')
   const [customMethod, setCustomMethod] = useState('GET')
+  const [savedRequestName, setSavedRequestName] = useState('')
+  const [isLoadingRequest, setIsLoadingRequest] = useState(false)
+  const [hasSavedRequest, setHasSavedRequest] = useState(false)
 
   const selectedEndpoint = state.selectedEndpoint
 
@@ -75,8 +80,24 @@ export default function RequestPanel() {
     return { valid: missing.length === 0, missing }
   })() : { valid: true, missing: [] }
 
-  // エンドポイント変更時にパラメータをリセット
+  // エンドポイント変更時にパラメータをリセットと保存されたリクエストを読み込み
   useEffect(() => {
+    if (!selectedEndpoint) return
+
+    // 保存されたリクエストを読み込み
+    loadSavedRequest()
+
+    // エンドポイントが変更された時のみカスタムURLを更新（空の場合のみ）
+    if (!customUrlPath) {
+      setCustomUrlPath(selectedEndpoint.path || '')
+      setCustomMethod(selectedEndpoint.method || 'GET')
+    }
+  }, [selectedEndpoint])
+
+  // 保存されたリクエストがない場合のみサンプルデータを生成
+  useEffect(() => {
+    if (hasSavedRequest || isLoadingRequest) return
+
     // パスパラメータを自動で初期化
     const initialPathParams: Record<string, string> = {}
     pathParametersFromUrl.forEach(param => {
@@ -88,12 +109,6 @@ export default function RequestPanel() {
     setCustomQueryParams({})
     setHeaders({})
     setRequestBody('')
-    
-    // エンドポイントが変更された時のみカスタムURLを更新（空の場合のみ）
-    if (selectedEndpoint && !customUrlPath) {
-      setCustomUrlPath(selectedEndpoint.path || '')
-      setCustomMethod(selectedEndpoint.method || 'GET')
-    }
 
     // サンプルデータを生成
     if (requestBodySchema?.schema) {
@@ -102,7 +117,7 @@ export default function RequestPanel() {
         setRequestBody(JSON.stringify(sample, null, 2))
       }
     }
-  }, [selectedEndpoint, requestBodySchema, generateSampleData])
+  }, [selectedEndpoint, requestBodySchema, generateSampleData, hasSavedRequest, isLoadingRequest])
   
   // パスパラメータの変更に対応する別のuseEffect
   useEffect(() => {
@@ -278,6 +293,71 @@ export default function RequestPanel() {
     copyToClipboard(urlPreview)
   }
 
+  // エンドポイントキーを生成
+  const getEndpointKey = (method: string, path: string) => {
+    return `${method.toUpperCase()}:${path}`
+  }
+
+  // 保存されたリクエストを読み込み
+  const loadSavedRequest = async () => {
+    if (!state.selectedSpec || !selectedEndpoint) return
+    
+    setIsLoadingRequest(true)
+    try {
+      const endpointKey = getEndpointKey(selectedEndpoint.method, selectedEndpoint.path)
+      const savedRequest = await getSavedRequestByEndpoint(state.selectedSpec.id, endpointKey)
+      
+      if (savedRequest) {
+        setPathParams(savedRequest.pathParams)
+        setQueryParams(savedRequest.queryParams)
+        setHeaders(savedRequest.headers)
+        if (savedRequest.body) {
+          setRequestBody(typeof savedRequest.body === 'string' ? savedRequest.body : JSON.stringify(savedRequest.body, null, 2))
+        }
+        setSavedRequestName(savedRequest.name || '')
+        setHasSavedRequest(true)
+      } else {
+        setHasSavedRequest(false)
+      }
+    } catch (error) {
+      console.error('Failed to load saved request:', error)
+    } finally {
+      setIsLoadingRequest(false)
+    }
+  }
+
+  // リクエストを保存
+  const saveCurrentRequest = async () => {
+    if (!state.selectedSpec || !selectedEndpoint) return
+    
+    try {
+      const endpointKey = getEndpointKey(selectedEndpoint.method, selectedEndpoint.path)
+      const savedRequest: SavedRequest = {
+        id: `${state.selectedSpec.id}_${endpointKey}`,
+        specId: state.selectedSpec.id,
+        endpointKey,
+        name: savedRequestName || `${selectedEndpoint.method} ${selectedEndpoint.path}`,
+        pathParams,
+        queryParams: { ...queryParams, ...customQueryParams },
+        headers,
+        body: requestBody ? JSON.parse(requestBody) : undefined,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+      
+      await saveSavedRequest(savedRequest)
+      setHasSavedRequest(true)
+      alert('Request saved successfully!')
+    } catch (error) {
+      console.error('Failed to save request:', error)
+      if (error instanceof SyntaxError) {
+        alert('Invalid JSON in request body. Please fix the JSON format before saving.')
+      } else {
+        alert('Failed to save request. Please try again.')
+      }
+    }
+  }
+
 
   if (!state.selectedEnvironment) {
     return (
@@ -341,15 +421,22 @@ export default function RequestPanel() {
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 API Spec: <span className="font-mono">{selectedEndpoint.method} {selectedEndpoint.path}</span>
               </p>
-              <button
-                onClick={() => {
-                  setCustomUrlPath(selectedEndpoint.path)
-                  setCustomMethod(selectedEndpoint.method)
-                }}
-                className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-              >
-                Use API Spec
-              </button>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => {
+                    setCustomUrlPath(selectedEndpoint.path)
+                    setCustomMethod(selectedEndpoint.method)
+                  }}
+                  className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                >
+                  Use API Spec
+                </button>
+                {hasSavedRequest && (
+                  <span className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded">
+                    Saved
+                  </span>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -391,6 +478,54 @@ export default function RequestPanel() {
           <span className="font-medium">Env:</span> {state.selectedEnvironment.name}
         </div>
       </div>
+
+      {/* Request Saving Section */}
+      {selectedEndpoint && (
+        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 p-3">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-medium text-blue-900 dark:text-blue-100">
+              Save Request Configuration
+            </h3>
+            <div className="flex items-center space-x-2">
+              {isLoadingRequest && (
+                <div className="flex items-center text-xs text-blue-600 dark:text-blue-400">
+                  <svg className="animate-spin -ml-1 mr-1 h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Loading...
+                </div>
+              )}
+              <button
+                onClick={loadSavedRequest}
+                disabled={isLoadingRequest}
+                className="px-2 py-1 text-xs bg-blue-600 dark:bg-blue-700 text-white rounded hover:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50"
+              >
+                Reload
+              </button>
+              <button
+                onClick={saveCurrentRequest}
+                disabled={isLoadingRequest}
+                className="px-2 py-1 text-xs bg-green-600 dark:bg-green-700 text-white rounded hover:bg-green-700 dark:hover:bg-green-600 disabled:opacity-50"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <input
+              type="text"
+              value={savedRequestName}
+              onChange={(e) => setSavedRequestName(e.target.value)}
+              placeholder={selectedEndpoint ? `${selectedEndpoint.method} ${selectedEndpoint.path}` : 'Request name (optional)'}
+              className="flex-1 px-2 py-1 border border-blue-300 dark:border-blue-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+          <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+            Save current parameter values to automatically restore them when selecting this API endpoint.
+          </p>
+        </div>
+      )}
 
       <div className="space-y-3">
         {/* パスパラメータ */}

@@ -164,3 +164,16 @@ export interface EndpointInfo {
   requestBody?: RequestBody | Reference
   responses?: Record<string, Response | Reference>
 }
+
+export interface SavedRequest {
+  id: string
+  specId: string
+  endpointKey: string // '{method}:{path}' format
+  name?: string
+  pathParams: Record<string, string>
+  queryParams: Record<string, string>
+  headers: Record<string, string>
+  body?: any
+  createdAt: Date
+  updatedAt: Date
+}
