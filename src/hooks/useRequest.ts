@@ -3,6 +3,7 @@ import { RequestBuilder, RequestConfig, RequestResult } from '../lib/request'
 import { Environment, OpenAPISpec, EndpointInfo } from '../types'
 import { useStorage } from './useStorage'
 import { useAppContext } from '../context/AppContext'
+import { lastRequestStorage } from '../lib/lastRequestStorage'
 
 export interface RequestState {
   loading: boolean
@@ -46,6 +47,14 @@ export function useRequest() {
         environment.headers,
         parameters.headers
       )
+
+      // Store request parameters for audit trail
+      lastRequestStorage.setLastRequestParams({
+        pathParams: parameters.pathParams,
+        queryParams: parameters.queryParams,
+        headers,
+        body: parameters.body
+      })
 
       // リクエスト設定
       const config: RequestConfig = {

@@ -159,6 +159,47 @@ interface SavedRequest {
 - Proper error handling for clipboard API failures
 - Applied to URL preview, response headers, and response body
 
+### Audit Trail Feature
+**Request/Response Audit Trail Export**: Copy complete request and response details for audit purposes.
+
+**Architecture:**
+- **AuditTrailData Type**: Structured format for request/response information
+- **formatAuditTrail Function**: Converts audit data to human-readable text format
+- **LastRequestStorage**: Singleton storage for preserving request parameters
+- **Copy Button Integration**: Added to ResponsePanel status bar
+
+**Features:**
+- **Comprehensive Data Capture**: Method, URL, headers, body, status, duration
+- **Sensitive Header Masking**: Automatically masks authorization tokens and API keys
+- **Clean Formatting**: Well-structured text output suitable for documentation
+- **No Cookie Inclusion**: Cookies are never included (Chrome extension default behavior)
+
+**Data Format:**
+```
+========== API Request/Response Audit Trail ==========
+Timestamp: 2025-01-06T10:30:45.123Z
+
+REQUEST
+-------
+Method: POST
+URL: https://api.example.com/users/123/orders?include=items
+Headers:
+  Authorization: Bearer ****
+  Content-Type: application/json
+Body:
+  {"productId": "ABC123"}
+
+RESPONSE
+--------
+Status: 201 Created
+Duration: 235ms
+Headers:
+  Content-Type: application/json
+Body:
+  {"orderId": "ORD-789"}
+======================================================
+```
+
 ## Chrome Extension Specifics
 
 ### Manifest V3 Configuration
@@ -192,6 +233,8 @@ Chrome extension permissions allow bypassing CORS restrictions that would normal
 ### Critical Files
 - `src/lib/openapi.ts`: OpenAPI parsing and $ref resolution engine
 - `src/lib/request.ts`: HTTP request builder and executor
+- `src/lib/auditTrail.ts`: Audit trail formatting and data structure
+- `src/lib/lastRequestStorage.ts`: Singleton storage for last request parameters
 - `src/context/AppContext.tsx`: Central state management
 - `src/hooks/useOpenApi.ts`: OpenAPI business logic hook
 - `src/hooks/useRequest.ts`: Request execution logic hook

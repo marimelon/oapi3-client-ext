@@ -5,12 +5,20 @@ import { useJq } from '../../hooks/useJq'
 import { getStatusColor } from '../../lib/utils'
 import JsonCollapsibleViewer from '../../components/JsonCollapsibleViewer'
 import JsonSyntaxHighlighter from '../../components/JsonSyntaxHighlighter'
+import { buildAuditTrailData, formatAuditTrail } from '../../lib/auditTrail'
+import { useAppContext } from '../../context/AppContext'
+import { RequestBuilder } from '../../lib/request'
+import { lastRequestStorage } from '../../lib/lastRequestStorage'
 
 type ViewMode = 'compact' | 'expanded' | 'full'
 type JsonDisplayMode = 'tree' | 'raw' | 'jq'
 
+// Constants
+const AUDIT_TRAIL_COPY_ID = 'audit-trail'
+
 export default function ResponsePanel() {
   const { requestState, formatResponse } = useRequest()
+  const { state } = useAppContext()
   const [isHeadersExpanded, setIsHeadersExpanded] = useState(false)
   const [isStatusExpanded, setIsStatusExpanded] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('expanded')
@@ -167,11 +175,11 @@ export default function ResponsePanel() {
       {/* ステータス情報 */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
         <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700">
-          <button
-            onClick={() => setIsStatusExpanded(!isStatusExpanded)}
-            className="flex items-center justify-between w-full text-left"
-          >
-            <div className="flex items-center space-x-3">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => setIsStatusExpanded(!isStatusExpanded)}
+              className="flex items-center space-x-3 flex-1 text-left"
+            >
               <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">Response Status</h3>
               <span className={`px-2 py-1 text-xs font-medium rounded-md ${
                 requestState.result.status ? getStatusColor(requestState.result.status) : 'text-gray-600 bg-gray-50'
@@ -183,16 +191,62 @@ export default function ResponsePanel() {
                   ⏱️ {requestState.result.duration}ms
                 </span>
               )}
-            </div>
-            <svg
-              className={`w-4 h-4 transition-transform ${isStatusExpanded ? 'rotate-90' : ''}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+              <svg
+                className={`w-4 h-4 transition-transform ${isStatusExpanded ? 'rotate-90' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+            <button
+              onClick={() => {
+                // Get request data from state
+                const endpoint = state.selectedEndpoint
+                const environment = state.selectedEnvironment
+                if (!endpoint || !environment) return
+
+                // Get stored request parameters
+                const lastRequestParams = lastRequestStorage.getLastRequestParams()
+                if (!lastRequestParams) return
+                
+                const { pathParams, queryParams, headers, body } = lastRequestParams
+                
+                // Build URL using RequestBuilder
+                const requestBuilder = RequestBuilder.getInstance()
+                const url = requestBuilder.buildUrl(
+                  environment.baseUrl,
+                  endpoint.path,
+                  pathParams || {},
+                  queryParams || {}
+                )
+
+                if (!requestState.result) return
+                
+                const auditData = buildAuditTrailData(
+                  endpoint.method,
+                  url,
+                  headers,
+                  body,
+                  requestState.result
+                )
+                
+                if (auditData) {
+                  const formatted = formatAuditTrail(auditData)
+                  copyToClipboard(formatted, AUDIT_TRAIL_COPY_ID)
+                }
+              }}
+              className={`ml-2 px-3 py-1 border rounded text-xs transition-colors ${
+                isCopied(AUDIT_TRAIL_COPY_ID)
+                  ? 'bg-green-100 dark:bg-green-900 border-green-300 dark:border-green-700 text-green-700 dark:text-green-300'
+                  : 'bg-white dark:bg-gray-600 border-gray-300 dark:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200'
+              }`}
+              title="Copy complete request/response audit trail"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
+              {isCopied('audit-trail') ? 'Copied!' : 'Copy Audit Trail'}
+            </button>
+          </div>
         </div>
         {isStatusExpanded && (
           <div className="p-3 space-y-2">
