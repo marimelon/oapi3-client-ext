@@ -134,11 +134,11 @@ export default function MainContent() {
       {/* メインコンテンツ - Podman風の統合ビュー */}
       <div className="flex-1 flex overflow-hidden">
         {activePanel === 'request' && (
-          <div className="flex-1 flex relative">
+          <div className="flex-1 flex relative overflow-hidden">
             {/* リクエストパネル */}
             <div 
               style={{ width: `${requestPanelWidth}%` }}
-              className="border-r border-gray-200 dark:border-gray-700 overflow-auto"
+              className="border-r border-gray-200 dark:border-gray-700 overflow-auto min-w-0"
             >
               <RequestPanel />
             </div>
@@ -154,7 +154,7 @@ export default function MainContent() {
             {/* レスポンスパネル */}
             <div 
               style={{ width: `${100 - requestPanelWidth}%` }}
-              className="overflow-auto"
+              className="overflow-auto min-w-0"
             >
               <ResponsePanel />
             </div>

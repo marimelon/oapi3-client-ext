@@ -267,6 +267,15 @@ Chrome extension permissions allow bypassing CORS restrictions that would normal
 - Large API specifications (performance)
 - Invalid parameter combinations
 
+## Known Issues and Fixes
+
+### ResponsePanel Content Overflow in Split View
+When displaying Request and Response panels simultaneously, the ResponsePanel content would overflow and get cut off on the right side. This has been fixed by:
+- Adding `overflow-hidden` to the parent container that holds both panels
+- Adding `min-w-0` class to both RequestPanel and ResponsePanel containers
+- This ensures proper flexbox width constraints are applied
+- The fix is implemented in `MainContent.tsx` for the split view layout
+
 ## Git Workflow and Commit Guidelines
 
 ### Automatic Commit Creation
