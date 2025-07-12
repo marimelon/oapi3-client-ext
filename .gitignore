@@ -10,6 +10,10 @@ lerna-debug.log*
 dist/
 build/
 
+# WXT build output
+.output/
+.wxt/
+
 # Environment variables
 .env
 .env.local
@@ -97,6 +101,10 @@ temp/
 *.crx
 *.pem
 key.pem
+*.zip
+
+# WXT specific
+web-ext-artifacts/
 
 # Test files
 test-results/
