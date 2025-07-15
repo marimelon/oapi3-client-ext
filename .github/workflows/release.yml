@@ -59,7 +59,7 @@ jobs:
 
       - name: Submit to stores
         run: |
-          npm run wxt submit \
+          npx wxt submit \
             --chrome-zip .output/${{steps.repository.outputs.name}}-${{ needs.Version.outputs.version }}-chrome.zip \
             ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.dry-run == 'true' && '--dry-run' || '' }}
         env:
