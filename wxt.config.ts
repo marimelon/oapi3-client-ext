@@ -4,7 +4,6 @@ import { resolve } from 'path';
 export default defineConfig({
   manifest: {
     name: 'OpenAPI 3 Client Extension',
-    version: '1.1.0',
     description: 'Chrome extension for testing OpenAPI 3 endpoints with browser authentication',
     permissions: [
       'storage',
