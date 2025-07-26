@@ -1,10 +1,18 @@
-import { pipeline, type TextGenerationPipeline } from '@huggingface/transformers';
+interface WorkerResponse {
+  type: 'success' | 'error';
+  id: string;
+  result?: any;
+  error?: string;
+}
 
 export class AIJqGenerator {
   private static instance: AIJqGenerator | null = null;
-  private pipeline: TextGenerationPipeline | null = null;
+  private worker: Worker | null = null;
   private isLoading = false;
+  private modelReady = false;
   private loadingPromise: Promise<void> | null = null;
+  private messageId = 0;
+  private pendingMessages = new Map<string, { resolve: (value: any) => void; reject: (error: Error) => void }>();
 
   private constructor() {}
 
@@ -16,11 +24,11 @@ export class AIJqGenerator {
   }
 
   async initialize(): Promise<void> {
-    if (this.pipeline) return;
+    if (this.modelReady) return;
     if (this.loadingPromise) return this.loadingPromise;
 
     this.isLoading = true;
-    this.loadingPromise = this._loadModel();
+    this.loadingPromise = this._initializeWorker();
     
     try {
       await this.loadingPromise;
@@ -30,42 +38,78 @@ export class AIJqGenerator {
     }
   }
 
-  private async _loadModel(): Promise<void> {
+  private async _initializeWorker(): Promise<void> {
     try {
-      this.pipeline = await pipeline(
-        'text-generation',
-        'HuggingFaceTB/SmolLM3-3B-ONNX',
-        { 
-          device: 'webgpu',
-          dtype: 'q8'
+      // Create worker from the worker file
+      this.worker = new Worker(new URL('./aiWorker.ts', import.meta.url), {
+        type: 'module'
+      });
+
+      // Set up message handler
+      this.worker.addEventListener('message', (event: MessageEvent<WorkerResponse>) => {
+        const { type, id, result, error } = event.data;
+        const pending = this.pendingMessages.get(id);
+        
+        if (pending) {
+          this.pendingMessages.delete(id);
+          if (type === 'success') {
+            pending.resolve(result);
+          } else {
+            pending.reject(new Error(error || 'Unknown worker error'));
+          }
         }
-      );
+      });
+
+      // Initialize the model in the worker
+      await this.sendMessage('initialize', {
+        model: 'HuggingFaceTB/SmolLM3-3B-ONNX',
+        device: 'webgpu',
+        dtype: 'q8'
+      });
+
+      this.modelReady = true;
     } catch (error) {
-      console.error('Failed to load AI model:', error);
+      console.error('Failed to initialize AI worker:', error);
       throw new Error('Failed to initialize AI model');
     }
   }
 
+  private sendMessage(type: string, payload?: any): Promise<any> {
+    return new Promise((resolve, reject) => {
+      if (!this.worker) {
+        reject(new Error('Worker not initialized'));
+        return;
+      }
+
+      const id = (++this.messageId).toString();
+      this.pendingMessages.set(id, { resolve, reject });
+
+      this.worker.postMessage({ type, id, payload });
+    });
+  }
+
   async generateJqQuery(naturalLanguageInput: string, jsonSample?: any): Promise<string> {
-    if (!this.pipeline) {
+    if (!this.modelReady) {
       await this.initialize();
     }
 
-    if (!this.pipeline) {
+    if (!this.modelReady) {
       throw new Error('Model not initialized');
     }
 
     const prompt = this.buildPrompt(naturalLanguageInput, jsonSample);
     
     try {
-      const result = await this.pipeline(prompt, {
-        max_new_tokens: 100,
-        temperature: 0.1,
-        do_sample: true,
-        top_p: 0.95,
+      const generatedText = await this.sendMessage('generate', {
+        prompt,
+        options: {
+          max_new_tokens: 100,
+          temperature: 0.1,
+          do_sample: true,
+          top_p: 0.95,
+        }
       });
 
-      const generatedText = result[0].generated_text;
       const jqQuery = this.extractJqQuery(generatedText);
       
       return jqQuery;
@@ -128,10 +172,20 @@ jq query:`;
   }
 
   isReady(): boolean {
-    return this.pipeline !== null;
+    return this.modelReady;
   }
 
   isModelLoading(): boolean {
     return this.isLoading;
+  }
+
+  dispose(): void {
+    if (this.worker) {
+      this.worker.terminate();
+      this.worker = null;
+    }
+    this.modelReady = false;
+    this.isLoading = false;
+    this.pendingMessages.clear();
   }
 }

@@ -48,7 +48,7 @@ export const AiJqPopup: React.FC<AiJqPopupProps> = ({
       setIsLoadingModel(true);
       generator.initialize()
         .then(() => setIsLoadingModel(false))
-        .catch(err => {
+        .catch(() => {
           setError('Failed to load AI model');
           setIsLoadingModel(false);
         });

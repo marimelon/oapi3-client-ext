@@ -141,9 +141,6 @@ export default function ResponsePanel() {
     }
   }
 
-  const handleAiGenerate = (query: string) => {
-    setJqQuery(query)
-  }
 
   if (requestState.loading) {
     return (
