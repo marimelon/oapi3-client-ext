@@ -9,6 +9,7 @@ import { buildAuditTrailData, formatAuditTrail } from '../../lib/auditTrail'
 import { useAppContext } from '../../context/AppContext'
 import { RequestBuilder } from '../../lib/request'
 import { lastRequestStorage } from '../../lib/lastRequestStorage'
+import { AiJqPopup } from './AiJqPopup'
 
 type ViewMode = 'compact' | 'expanded' | 'full'
 type JsonDisplayMode = 'tree' | 'raw' | 'jq'
@@ -28,7 +29,10 @@ export default function ResponsePanel() {
   const [jqQuery, setJqQuery] = useState('')
   const [jqResult, setJqResult] = useState<{data: any, error: string | null}>({data: null, error: null})
   const [jqProcessing, setJqProcessing] = useState(false)
+  const [showAiPopup, setShowAiPopup] = useState(false)
+  const [aiButtonPosition, setAiButtonPosition] = useState({ x: 0, y: 0 })
   const resizeRef = useRef<HTMLDivElement>(null)
+  const aiButtonRef = useRef<HTMLButtonElement>(null)
   const { copyToClipboard, isCopied } = useMultiCopyToClipboard()
   const { processQuery, isReady } = useJq()
 
@@ -400,16 +404,33 @@ export default function ResponsePanel() {
                   <span className="text-xs text-blue-600 dark:text-blue-400">Processing...</span>
                 )}
               </div>
-              <input
-                id="jq-query"
-                type="text"
-                value={jqQuery}
-                onChange={(e) => setJqQuery(e.target.value)}
-                onPaste={handlePaste}
-                placeholder={'e.g., .items[] | select(.status == "active")'}
-                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-                disabled={!isReady}
-              />
+              <div className="flex items-center space-x-2">
+                <input
+                  id="jq-query"
+                  type="text"
+                  value={jqQuery}
+                  onChange={(e) => setJqQuery(e.target.value)}
+                  onPaste={handlePaste}
+                  placeholder={'e.g., .items[] | select(.status == "active")'}
+                  className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                  disabled={!isReady}
+                />
+                <button
+                  ref={aiButtonRef}
+                  onClick={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setAiButtonPosition({ x: rect.left, y: rect.bottom + 5 });
+                    setShowAiPopup(true);
+                  }}
+                  className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+                  disabled={!isReady}
+                  title="Generate jq query with AI"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                </button>
+              </div>
               {jqResult.error && (
                 <div className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-2 rounded">
                   {jqResult.error}
@@ -484,6 +505,17 @@ export default function ResponsePanel() {
         </div>
       </div>
 
+      {/* AI jq Query Popup */}
+      <AiJqPopup
+        isOpen={showAiPopup}
+        onClose={() => setShowAiPopup(false)}
+        onGenerate={(query) => {
+          setJqQuery(query);
+          setShowAiPopup(false);
+        }}
+        jsonSample={requestState.result?.data}
+        position={aiButtonPosition}
+      />
     </div>
   )
 }

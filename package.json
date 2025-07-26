@@ -12,6 +12,7 @@
     "postinstall": "wxt prepare"
   },
   "dependencies": {
+    "@huggingface/transformers": "^3.7.0",
     "jq-web": "^0.6.2",
     "js-yaml": "^4.1.0",
     "react": "^19.1.0",
