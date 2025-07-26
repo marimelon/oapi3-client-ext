@@ -159,6 +159,28 @@ interface SavedRequest {
 - Proper error handling for clipboard API failures
 - Applied to URL preview, response headers, and response body
 
+### AI-Powered jq Query Generation
+**Natural Language to jq Query**: Generate jq queries using AI from natural language descriptions.
+
+**Architecture:**
+- **AIJqGenerator Service**: Singleton service managing transformers.js model loading and inference
+- **Model**: Uses HuggingFaceTB/SmolLM3-3B-ONNX for powerful browser-based generation
+- **On-demand Loading**: Model loads only when AI feature is first used
+- **WebGPU Acceleration**: Leverages WebGPU for faster inference when available
+
+**Features:**
+- **AI Button**: Located next to jq query input field with computer/monitor icon
+- **Popup Interface**: Natural language input appears in popup on button click
+- **Context-Aware**: Uses current JSON response data as context for query generation
+- **Automatic Application**: Generated queries automatically populate the jq input field
+- **Loading States**: Clear feedback during model initialization and query generation
+
+**User Flow:**
+1. Click AI button next to jq query input
+2. Enter natural language description (e.g., "Get all items with status active")
+3. AI generates appropriate jq query based on response data structure
+4. Query automatically fills the jq input field for immediate use
+
 ### Audit Trail Feature
 **Request/Response Audit Trail Export**: Copy complete request and response details for audit purposes.
 
@@ -235,6 +257,7 @@ Chrome extension permissions allow bypassing CORS restrictions that would normal
 - `src/lib/request.ts`: HTTP request builder and executor
 - `src/lib/auditTrail.ts`: Audit trail formatting and data structure
 - `src/lib/lastRequestStorage.ts`: Singleton storage for last request parameters
+- `src/lib/aiJqGenerator.ts`: AI-powered jq query generation service
 - `src/context/AppContext.tsx`: Central state management
 - `src/hooks/useOpenApi.ts`: OpenAPI business logic hook
 - `src/hooks/useRequest.ts`: Request execution logic hook
@@ -250,6 +273,9 @@ Chrome extension permissions allow bypassing CORS restrictions that would normal
 - Consistent prop interfaces
 - Event handling with proper preventDefault/stopPropagation
 - Accessibility considerations (proper ARIA labels, keyboard navigation)
+
+### AI Components
+- `src/options/components/AiJqPopup.tsx`: Popup interface for natural language jq query generation
 
 ## Testing Approach
 

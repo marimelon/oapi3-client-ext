@@ -34,10 +34,10 @@ export class AIJqGenerator {
     try {
       this.pipeline = await pipeline(
         'text-generation',
-        'onnx-community/SmolLM2-135M-Instruct',
+        'HuggingFaceTB/SmolLM3-3B-ONNX',
         { 
           device: 'webgpu',
-          dtype: 'fp16'
+          dtype: 'q8'
         }
       );
     } catch (error) {
