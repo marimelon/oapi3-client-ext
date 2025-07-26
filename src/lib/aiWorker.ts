@@ -37,7 +37,7 @@ class AIWorker {
       const pipelineCreator = pipeline as any;
       this.pipeline = await pipelineCreator('text-generation', payload.model, { 
         device: payload.device || 'webgpu',
-        dtype: payload.dtype || 'q8'
+        dtype: payload.dtype || 'q4f16'
       });
     } finally {
       this.isLoading = false;

@@ -64,7 +64,7 @@ export class AIJqGenerator {
       await this.sendMessage('initialize', {
         model: 'HuggingFaceTB/SmolLM3-3B-ONNX',
         device: 'webgpu',
-        dtype: 'q8'
+        dtype: 'q4f16'
       });
 
       this.modelReady = true;
