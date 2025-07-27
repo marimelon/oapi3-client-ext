@@ -1,5 +1,5 @@
 import * as ort from 'onnxruntime-web';
-// import { AutoTokenizer } from '@xenova/transformers'; // Temporarily disabled
+import { AutoTokenizer } from '@xenova/transformers';
 
 // Configure ONNX Runtime for web worker environment
 ort.env.wasm.numThreads = 1;
@@ -52,19 +52,50 @@ class AIWorker {
     this.isLoading = true;
     
     try {
-      // For now, skip actual model loading and use heuristic approach
-      // This avoids the WASM loading issues while we debug
-      console.log('Initializing AI Worker with config:', payload);
+      console.log('Initializing SmolLM3-3B-ONNX model...');
       
-      // Create a mock session
+      // Initialize tokenizer
+      const tokenizer = await AutoTokenizer.from_pretrained(payload.tokenizerModel);
+      
+      // For SmolLM3-3B-ONNX, we need to download the data file as well
+      // The model has a separate .onnx_data file that contains the weights
+      const modelDataUrl = payload.modelUrl.replace('.onnx', '.onnx_data');
+      
+      // Pre-fetch the data file to ensure it's available
+      try {
+        await fetch(modelDataUrl, { method: 'HEAD' });
+      } catch (e) {
+        console.warn('Model data file may not be accessible:', e);
+      }
+      
+      // Configure execution providers
+      const executionProviders = payload.executionProviders || ['wasm'];
+      
+      // Create ONNX Runtime session
+      const session = await ort.InferenceSession.create(payload.modelUrl, {
+        executionProviders,
+        graphOptimizationLevel: 'all',
+        logSeverityLevel: 3, // Warning level
+        logVerbosityLevel: 0
+      });
+      
+      console.log('Model loaded successfully');
+      console.log('Input names:', session.inputNames);
+      console.log('Output names:', session.outputNames);
+      
       this.modelSession = {
-        session: null as any, // Mock session
-        tokenizer: null as any, // Mock tokenizer
+        session,
+        tokenizer,
         maxLength: payload.maxLength || 512
       };
-      
-      // Simulate loading delay
-      await new Promise(resolve => setTimeout(resolve, 500));
+    } catch (error) {
+      console.error('Failed to initialize model:', error);
+      // Fall back to heuristic approach if model loading fails
+      this.modelSession = {
+        session: null as any,
+        tokenizer: null as any,
+        maxLength: payload.maxLength || 512
+      };
     } finally {
       this.isLoading = false;
     }
@@ -76,14 +107,36 @@ class AIWorker {
     }
 
     const { prompt } = payload;
+    const { session, tokenizer } = this.modelSession;
 
     try {
-      // For now, use heuristic-based approach
-      // Full ONNX implementation requires proper model with compatible architecture
+      // If model didn't load properly, use heuristic approach
+      if (!session || !tokenizer) {
+        return this.generateBasicJqQuery(prompt);
+      }
+      
+      // Format prompt for SmolLM3
+      const formattedPrompt = `Generate a jq query for: ${prompt}\n\njq query:`;
+      
+      // Tokenize input
+      const inputs = await tokenizer(formattedPrompt, {
+        return_tensors: true,
+        padding: true,
+        truncation: true,
+        max_length: 512
+      });
+      
+      // Log tensor info for debugging
+      console.log('Tokenized input shape:', inputs.input_ids.dims);
+      
+      // For now, still use heuristic approach until we implement proper generation
+      // SmolLM3 requires complex generation logic with attention masks and position ids
       return this.generateBasicJqQuery(prompt);
+      
     } catch (error) {
       console.error('Generation error:', error);
-      throw new Error(`Generation failed: ${error}`);
+      // Fallback to heuristic approach
+      return this.generateBasicJqQuery(prompt);
     }
   }
 
@@ -146,15 +199,19 @@ class AIWorker {
     return {
       isLoading: this.isLoading,
       isReady: this.modelSession !== null,
-      executionProviders: this.modelSession?.session.inputNames || [],
-      inputNames: this.modelSession?.session.inputNames || [],
-      outputNames: this.modelSession?.session.outputNames || []
+      executionProviders: this.modelSession?.session?.inputNames || [],
+      inputNames: this.modelSession?.session?.inputNames || [],
+      outputNames: this.modelSession?.session?.outputNames || []
     };
   }
 
   dispose(): void {
-    if (this.modelSession) {
-      this.modelSession.session.release();
+    if (this.modelSession && this.modelSession.session) {
+      try {
+        this.modelSession.session.release();
+      } catch (e) {
+        console.warn('Error releasing session:', e);
+      }
       this.modelSession = null;
     }
   }

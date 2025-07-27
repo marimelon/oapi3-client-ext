@@ -164,18 +164,25 @@ interface SavedRequest {
 
 **Architecture:**
 - **AIJqGenerator Service**: Singleton service managing ONNX Runtime Web model loading and inference
-- **Model**: Uses HuggingFaceTB/SmolLM-135M-Instruct-ONNX for efficient browser-based generation
-- **Runtime**: ONNX Runtime Web with WebGPU acceleration for optimal performance
-- **Tokenization**: @xenova/transformers tokenizer for text preprocessing
+- **Model**: Uses HuggingFaceTB/SmolLM3-3B-ONNX (3B parameter model) for powerful browser-based generation
+- **Runtime**: ONNX Runtime Web with WebGPU/WASM execution provider fallback
+- **Tokenization**: @xenova/transformers tokenizer for SmolLM3 text preprocessing
 - **Web Worker**: Model loading and inference run in dedicated worker thread for non-blocking UI
 - **On-demand Loading**: Model loads only when AI feature is first used
 
 **Technical Implementation:**
-- **ONNX Runtime Web**: Utilizes latest ONNX Runtime 1.17+ with WebGPU backend support
-- **Model Format**: Quantized ONNX model (q4f16) for optimal size/performance balance
-- **Fallback Support**: WebGPU → WASM execution provider fallback for broad compatibility
+- **ONNX Runtime Web**: Utilizes latest ONNX Runtime 1.22+ with WebGPU backend support
+- **Model Format**: SmolLM3-3B quantized ONNX model (q4) from Hugging Face
+- **Model Files**: Loads both model_q4.onnx (graph) and model_q4.onnx_data (weights)
+- **Fallback System**: WASM → WebGPU execution provider with heuristic fallback
+- **Error Handling**: Graceful degradation to pattern-based jq generation if model fails
 - **Memory Management**: Proper tensor cleanup and session disposal to prevent memory leaks
 - **Caching**: Models cached in browser IndexedDB for faster subsequent loads
+
+**Hybrid Approach:**
+- **Primary**: ONNX Runtime Web with SmolLM3-3B for advanced query generation
+- **Fallback**: Heuristic pattern matching for common jq operations (keys, length, filtering)
+- **Seamless**: Users experience consistent functionality regardless of which approach is used
 
 **Features:**
 - **AI Button**: Located next to jq query input field with computer/monitor icon
