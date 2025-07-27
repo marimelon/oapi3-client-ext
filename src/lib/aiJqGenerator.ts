@@ -32,7 +32,7 @@ interface GenerationOptions {
 
 // Constants - Use HuggingFaceTB/SmolLM3-3B with transformers.js
 const DEFAULT_MODEL_CONFIG: ModelConfig = {
-  modelId: 'HuggingFaceTB/SmolLM3-3B', // Use the base model for transformers.js
+  modelId: 'HuggingFaceTB/SmolLM3-3B-ONNX', // Use the base model for transformers.js
   maxLength: 512,
   device: 'webgpu'
 };
@@ -373,12 +373,9 @@ jq query:`;
   ): Promise<string> {
     await this.ensureModelReady();
 
-    const finalPrompt = useTemplate ? this.formatSmolLMDebugPrompt(prompt) : prompt;
-
     console.log('🐛 DEBUG: Direct LLM generation');
     console.log('🐛 DEBUG: Original prompt:', prompt);
     console.log('🐛 DEBUG: Use template:', useTemplate);
-    console.log('🐛 DEBUG: Final prompt:', finalPrompt);
     console.log('🐛 DEBUG: Options:', options || 'default');
 
     try {
@@ -387,8 +384,17 @@ jq query:`;
         ...options
       };
 
+      // Use chat template via transformers.js pipeline
+      const messages = useTemplate ? [
+        {
+          role: "system",
+          content: "You are a helpful assistant. Respond directly and concisely."
+        },
+        { role: "user", content: prompt }
+      ] : prompt;
+
       const result = await this.sendMessage('generate', {
-        prompt: finalPrompt,
+        prompt: messages,
         options: generationOptions
       });
 
@@ -400,42 +406,6 @@ jq query:`;
     }
   }
 
-  /**
-   * Format prompt using SmolLM3-3B official chat template for debug purposes
-   * Based on official chat_template.jinja from HuggingFace
-   * @private
-   */
-  private formatSmolLMDebugPrompt(userPrompt: string): string {
-    const today = new Date().toLocaleDateString('en-GB', { 
-      day: 'numeric',
-      month: 'long', 
-      year: 'numeric' 
-    });
-    
-    const customInstructions = "You are a helpful assistant. Respond directly and concisely.";
-
-    const template = `<|im_start|>system
-## Metadata
-
-Knowledge Cutoff Date: June 2025
-Today Date: ${today}
-Reasoning Mode: /no_think
-
-## Custom Instructions
-
-${customInstructions}
-
-<|im_end|>
-<|im_start|>user
-${userPrompt}<|im_end|>
-<|im_start|>assistant
-<think>
-
-</think>
-`;
-    
-    return template;
-  }
 
   /**
    * Check if the model is ready for use.

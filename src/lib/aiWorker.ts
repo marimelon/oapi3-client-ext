@@ -21,7 +21,7 @@ interface ModelSession {
 }
 
 interface GeneratePayload {
-  prompt: string;
+  prompt: string | Array<{role: string, content: string}>;
   options: {
     max_new_tokens?: number;
     temperature?: number;
@@ -47,9 +47,9 @@ class AIWorker {
       // Create text generation pipeline
       const pipelineConfig: any = {
         device: payload.device || 'webgpu',
-        dtype: 'q4'
+        dtype: 'q4f16'
       };
-      
+
       const textGenerator = await pipeline('text-generation', payload.modelId, pipelineConfig);
 
       console.log('✅ Pipeline created successfully');
@@ -83,13 +83,29 @@ class AIWorker {
     const { pipeline } = this.modelSession;
 
     try {
-      // Format prompt using SmolLM3-3B chat template
-      const formattedPrompt = this.formatSmolLMPrompt(prompt);
-      console.log('📝 Formatted prompt with SmolLM3 template:', formattedPrompt);
+      // Prepare messages based on prompt type
+      let messages;
+      if (typeof prompt === 'string') {
+        // If prompt is a string, create default jq query messages
+        messages = [
+          {
+            "role": "system",
+            "content": "You are a helpful assistant that generates jq queries. Generate only the jq query without any explanation.",
+          },
+          { "role": "user", "content": `Generate a jq query for: ${prompt}` },
+        ];
+      } else {
+        // If prompt is already messages array, use it directly
+        messages = prompt;
+      }
+
+      // Log the chat template for debugging
+      const formattedTemplate = pipeline.tokenizer.apply_chat_template(messages);
+      console.log('📝 Chat template output:', formattedTemplate);
 
       // Generate text using transformers.js pipeline
       console.log('🚀 Running text generation with pipeline...');
-      const result = await pipeline(formattedPrompt, {
+      const result = await pipeline(messages, {
         max_new_tokens: options.max_new_tokens || 50,
         temperature: options.temperature || 0.1,
         do_sample: options.do_sample !== undefined ? options.do_sample : true,
@@ -104,6 +120,10 @@ class AIWorker {
       let generatedText = '';
       if (Array.isArray(result) && result.length > 0) {
         generatedText = (result[0] as any).generated_text || '';
+        if (Array.isArray(generatedText)) {
+          // 最後の要素を取得する
+          generatedText = generatedText[generatedText.length - 1].content;
+        }
       } else if (typeof result === 'object' && (result as any).generated_text) {
         generatedText = (result as any).generated_text;
       } else {
@@ -133,15 +153,15 @@ class AIWorker {
   private cleanGeneratedText(text: string): string {
     // Remove <think></think> tags and their content
     let cleaned = text.replace(/<think>[\s\S]*?<\/think>/g, '');
-    
+
     // Remove extra whitespace and newlines
     cleaned = cleaned.trim();
-    
+
     // If the text is empty or just whitespace, return fallback
     if (!cleaned) {
       return '.';
     }
-    
+
     return cleaned;
   }
 
@@ -150,41 +170,6 @@ class AIWorker {
     return '.';
   }
 
-  /**
-   * Format prompt using SmolLM3-3B official chat template
-   * Based on official chat_template.jinja from HuggingFace
-   */
-  private formatSmolLMPrompt(userPrompt: string): string {
-    const today = new Date().toLocaleDateString('en-GB', { 
-      day: 'numeric',
-      month: 'long', 
-      year: 'numeric' 
-    });
-    
-    const customInstructions = "You are a helpful assistant that generates jq queries. Generate only the jq query without any explanation.";
-
-    const template = `<|im_start|>system
-## Metadata
-
-Knowledge Cutoff Date: June 2025
-Today Date: ${today}
-Reasoning Mode: /no_think
-
-## Custom Instructions
-
-${customInstructions}
-
-<|im_end|>
-<|im_start|>user
-Generate a jq query for: ${userPrompt}<|im_end|>
-<|im_start|>assistant
-<think>
-
-</think>
-`;
-    
-    return template;
-  }
 
   getStatus() {
     return {
