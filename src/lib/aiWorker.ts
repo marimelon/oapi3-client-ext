@@ -128,6 +128,7 @@ class AIWorker {
 
       // Format prompt for text generation focused on jq queries
       const formattedPrompt = `Generate a jq query for: ${prompt}\njq query:`;
+      console.log('📝 Formatted prompt:', formattedPrompt);
 
       // Tokenize input
       const inputs = await tokenizer(formattedPrompt, {
