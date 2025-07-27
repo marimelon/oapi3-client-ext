@@ -171,6 +171,22 @@ class AIWorker {
         feeds.position_ids = positionIdsTensor;
       }
 
+      // Add past_key_values if required by the model
+      // SmolLM3-3B uses past_key_values for caching in generation
+      for (const inputName of session.inputNames) {
+        if (inputName.startsWith('past_key_values.')) {
+          // Initialize empty past_key_values tensors for first generation
+          // These will be populated by the model's output for subsequent generations
+          // The shape depends on the model architecture - for SmolLM3-3B it's typically:
+          // [batch_size, num_heads, 0, head_dim] for initial empty cache
+          
+          // Since we don't have past values yet, we'll pass empty tensors
+          // The model will generate these for us
+          const emptyTensor = new ort.Tensor('float32', new Float32Array(0), [batchSize, 1, 0, 1]);
+          feeds[inputName] = emptyTensor;
+        }
+      }
+
       console.log('Prepared feeds for model inputs:', Object.keys(feeds));
 
       console.log('Running ONNX inference...');
