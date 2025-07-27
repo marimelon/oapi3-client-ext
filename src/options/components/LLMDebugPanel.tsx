@@ -15,6 +15,7 @@ export const LLMDebugPanel: React.FC<LLMDebugPanelProps> = ({ isOpen, onClose })
   const [maxTokens, setMaxTokens] = useState(100);
   const [isInitializing, setIsInitializing] = useState(false);
   const [modelStatus, setModelStatus] = useState<'not-initialized' | 'loading' | 'ready'>('not-initialized');
+  const [useTemplate, setUseTemplate] = useState(true);
   const generator = AIJqGenerator.getInstance();
 
   // Update model status
@@ -61,7 +62,7 @@ export const LLMDebugPanel: React.FC<LLMDebugPanelProps> = ({ isOpen, onClose })
       const result = await generator.debugGenerateLLM(prompt, {
         temperature,
         max_new_tokens: maxTokens
-      });
+      }, useTemplate);
       setResponse(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate');
@@ -127,6 +128,20 @@ export const LLMDebugPanel: React.FC<LLMDebugPanelProps> = ({ isOpen, onClose })
                 className="w-full"
               />
             </div>
+          </div>
+
+          {/* Template Toggle */}
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="use-template"
+              checked={useTemplate}
+              onChange={(e) => setUseTemplate(e.target.checked)}
+              className="rounded"
+            />
+            <label htmlFor="use-template" className="text-sm text-gray-700 dark:text-gray-300">
+              Use SmolLM3-3B Chat Template ({useTemplate ? 'enabled' : 'disabled'})
+            </label>
           </div>
 
           {/* Prompt Input */}

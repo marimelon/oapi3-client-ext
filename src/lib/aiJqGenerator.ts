@@ -33,7 +33,7 @@ interface GenerationOptions {
 
 // Constants - Use HuggingFaceTB/SmolLM3-3B-ONNX as requested
 const DEFAULT_MODEL_CONFIG: ModelConfig = {
-  modelUrl: 'https://huggingface.co/HuggingFaceTB/SmolLM3-3B-ONNX/resolve/main/onnx/model_q4f16.onnx',
+  modelUrl: 'https://huggingface.co/HuggingFaceTB/SmolLM3-3B-ONNX/resolve/main/onnx/model_q4.onnx',
   tokenizerModel: 'HuggingFaceTB/SmolLM3-3B-ONNX', // Use matching tokenizer
   maxLength: 512,
   executionProviders: ['wasm', 'webgpu']
@@ -64,11 +64,11 @@ export class AIJqGenerator {
   private constructor() {
     // Expose debug method to window for console testing
     if (typeof window !== 'undefined') {
-      (window as any).__llmDebug = async (prompt: string, options?: any) => {
+      (window as any).__llmDebug = async (prompt: string, options?: any, useTemplate: boolean = true) => {
         console.log('🐛 Initializing LLM if needed...');
         try {
           await this.initialize();
-          return await this.debugGenerateLLM(prompt, options);
+          return await this.debugGenerateLLM(prompt, options, useTemplate);
         } catch (error) {
           console.error('🐛 Debug error:', error);
           throw error;
@@ -369,32 +369,54 @@ jq query:`;
    * @throws {Error} If generation fails
    */
   async debugGenerateLLM(
-    prompt: string, 
-    options?: Partial<GenerationOptions>
+    prompt: string,
+    options?: Partial<GenerationOptions>,
+    useTemplate: boolean = true
   ): Promise<string> {
     await this.ensureModelReady();
-    
+
+    const finalPrompt = useTemplate ? this.formatSmolLMDebugPrompt(prompt) : prompt;
+
     console.log('🐛 DEBUG: Direct LLM generation');
-    console.log('🐛 DEBUG: Prompt:', prompt);
+    console.log('🐛 DEBUG: Original prompt:', prompt);
+    console.log('🐛 DEBUG: Use template:', useTemplate);
+    console.log('🐛 DEBUG: Final prompt:', finalPrompt);
     console.log('🐛 DEBUG: Options:', options || 'default');
-    
+
     try {
       const generationOptions = {
         ...DEFAULT_GENERATION_OPTIONS,
         ...options
       };
-      
+
       const result = await this.sendMessage('generate', {
-        prompt,
+        prompt: finalPrompt,
         options: generationOptions
       });
-      
+
       console.log('🐛 DEBUG: Raw LLM output:', result);
       return result;
     } catch (error) {
       console.error('🐛 DEBUG: LLM generation failed:', error);
       throw new Error(`Debug LLM generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+  }
+
+  /**
+   * Format prompt using SmolLM3-3B official chat template for debug purposes
+   * @private
+   */
+  private formatSmolLMDebugPrompt(userPrompt: string): string {
+    const systemMessage = "You are a helpful assistant. Respond directly and concisely.";
+    
+    const template = `<|im_start|>system
+${systemMessage}<|im_end|>
+<|im_start|>user
+${userPrompt}<|im_end|>
+<|im_start|>assistant
+`;
+    
+    return template;
   }
 
   /**

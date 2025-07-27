@@ -78,8 +78,8 @@ class AIWorker {
         logVerbosityLevel: 0,
         externalData: [
           {
-            path: "./model_q4f16.onnx_data",
-            data: "https://huggingface.co/HuggingFaceTB/SmolLM3-3B-ONNX/resolve/main/onnx/model_q4f16.onnx_data" as any
+            path: "./model_q4.onnx_data",
+            data: "https://huggingface.co/HuggingFaceTB/SmolLM3-3B-ONNX/resolve/main/onnx/model_q4.onnx_data" as any
           }
         ]
       });
@@ -130,9 +130,9 @@ class AIWorker {
         return this.generateBasicJqQuery();
       }
 
-      // Format prompt for text generation focused on jq queries
-      const formattedPrompt = `Generate a jq query for: ${prompt}\njq query:`;
-      console.log('📝 Formatted prompt:', formattedPrompt);
+      // Format prompt using SmolLM3-3B chat template
+      const formattedPrompt = this.formatSmolLMPrompt(prompt);
+      console.log('📝 Formatted prompt with SmolLM3 template:', formattedPrompt);
 
       // Tokenize input
       const inputs = await tokenizer(formattedPrompt, {
@@ -190,7 +190,7 @@ class AIWorker {
           const pastSeqLen = 0; // No past tokens for initial generation
 
           // Create empty tensor with correct shape
-          const emptyTensor = new ort.Tensor('float16', (new Float16Array(0)) as any, [batchSize, numHeads, pastSeqLen, headDim]);
+          const emptyTensor = new ort.Tensor('float32', (new Float32Array(0)) as any, [batchSize, numHeads, pastSeqLen, headDim]);
           feeds[inputName] = emptyTensor;
         }
       }
@@ -357,6 +357,23 @@ class AIWorker {
   private generateBasicJqQuery(): string {
     // Simple fallback for error cases
     return '.';
+  }
+
+  /**
+   * Format prompt using SmolLM3-3B official chat template
+   * Template: <|im_start|>system\n{system_message}<|im_end|>\n<|im_start|>user\n{user_message}<|im_end|>\n<|im_start|>assistant\n
+   */
+  private formatSmolLMPrompt(userPrompt: string): string {
+    const systemMessage = "You are a helpful assistant that generates jq queries. Generate only the jq query without any explanation.";
+    
+    const template = `<|im_start|>system
+${systemMessage}<|im_end|>
+<|im_start|>user
+Generate a jq query for: ${userPrompt}<|im_end|>
+<|im_start|>assistant
+`;
+    
+    return template;
   }
 
   getStatus() {
