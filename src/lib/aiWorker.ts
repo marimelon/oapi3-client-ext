@@ -96,39 +96,19 @@ class AIWorker {
         }
       }
       
-      // For SmolLM3-3B-ONNX, we need to download the data file as well
-      // The model has a separate .onnx_data file that contains the weights
-      const modelDataUrl = payload.modelUrl.replace('.onnx', '.onnx_data');
+      // Temporarily disable ONNX model loading due to external data file issues
+      // This is a known issue with ONNX models that have separate .onnx_data files
+      console.log('⚠️ ONNX model loading temporarily disabled due to external data file issues');
+      console.log('🔄 Using enhanced heuristic approach for jq generation');
       
-      // Pre-fetch the data file to ensure it's available
-      try {
-        await fetch(modelDataUrl, { method: 'HEAD' });
-      } catch (e) {
-        console.warn('Model data file may not be accessible:', e);
-      }
-      
-      // Configure execution providers
-      const executionProviders = payload.executionProviders || ['wasm'];
-      
-      // Create ONNX Runtime session
-      const session = await ort.InferenceSession.create(payload.modelUrl, {
-        executionProviders,
-        graphOptimizationLevel: 'all',
-        logSeverityLevel: 3, // Warning level
-        logVerbosityLevel: 0
-      });
-      
-      console.log('Model loaded successfully');
-      console.log('Input names:', session.inputNames);
-      console.log('Output names:', session.outputNames);
-      
+      // Skip ONNX model loading and use tokenizer + heuristics
       this.modelSession = {
-        session,
+        session: null as any, // Intentionally null - use heuristics
         tokenizer,
         maxLength: payload.maxLength || 512
       };
       
-      console.log('✅ Model and tokenizer loaded successfully!');
+      console.log('✅ Tokenizer loaded successfully, using hybrid approach!');
     } catch (error) {
       console.error('❌ Failed to initialize model:', error);
       console.error('Error details:', {
@@ -189,40 +169,116 @@ class AIWorker {
   }
 
   private generateBasicJqQuery(prompt: string): string {
-    // Basic heuristic-based jq query generation as fallback
+    // Enhanced heuristic-based jq query generation
     const lowerPrompt = prompt.toLowerCase();
+    const originalPrompt = prompt.trim();
     
-    if (lowerPrompt.includes('keys') || lowerPrompt.includes('properties')) {
+    // Common operations
+    if (lowerPrompt.includes('keys') || lowerPrompt.includes('properties') || lowerPrompt.includes('fields')) {
       return 'keys';
     }
-    if (lowerPrompt.includes('count') || lowerPrompt.includes('length')) {
+    if (lowerPrompt.includes('count') || lowerPrompt.includes('length') || lowerPrompt.includes('size')) {
       return 'length';
     }
-    if (lowerPrompt.includes('first')) {
+    if (lowerPrompt.includes('first') || lowerPrompt.includes('initial')) {
       return '.[0]';
     }
-    if (lowerPrompt.includes('last')) {
+    if (lowerPrompt.includes('last') || lowerPrompt.includes('final')) {
       return '.[-1]';
     }
-    if (lowerPrompt.includes('array')) {
+    if (lowerPrompt.includes('all items') || lowerPrompt.includes('all elements') || lowerPrompt.includes('flatten')) {
       return '.[]';
     }
-    if (lowerPrompt.includes('filter') && lowerPrompt.includes('null')) {
-      return 'map(select(. != null))';
-    }
-    if (lowerPrompt.includes('unique')) {
+    if (lowerPrompt.includes('unique') || lowerPrompt.includes('distinct')) {
       return 'unique';
     }
-    if (lowerPrompt.includes('sort')) {
+    if (lowerPrompt.includes('sort') || lowerPrompt.includes('order')) {
+      if (lowerPrompt.includes('reverse') || lowerPrompt.includes('desc')) {
+        return 'sort | reverse';
+      }
       return 'sort';
     }
     
-    // Extract field names from prompt
-    const fieldMatch = prompt.match(/["']?(\w+)["']?\s*(field|property|attribute|value)?/i);
-    if (fieldMatch && fieldMatch[1]) {
-      return `.${fieldMatch[1]}`;
+    // Filtering operations
+    if (lowerPrompt.includes('filter') || lowerPrompt.includes('select') || lowerPrompt.includes('where')) {
+      if (lowerPrompt.includes('null')) {
+        return 'map(select(. != null))';
+      }
+      if (lowerPrompt.includes('empty')) {
+        return 'map(select(. != \"\"))';
+      }
+      if (lowerPrompt.includes('true') || lowerPrompt.includes('enabled')) {
+        return 'map(select(. == true))';
+      }
+      if (lowerPrompt.includes('false') || lowerPrompt.includes('disabled')) {
+        return 'map(select(. == false))';
+      }
     }
     
+    // Array operations
+    if (lowerPrompt.includes('slice') || lowerPrompt.includes('range')) {
+      const numberMatch = originalPrompt.match(/(\d+)/);
+      if (numberMatch) {
+        return `.[0:${numberMatch[1]}]`;
+      }
+      return '.[0:5]';
+    }
+    
+    // Value operations
+    if (lowerPrompt.includes('values') || lowerPrompt.includes('all values')) {
+      return '.[]';
+    }
+    if (lowerPrompt.includes('type') || lowerPrompt.includes('types')) {
+      return 'type';
+    }
+    if (lowerPrompt.includes('min') || lowerPrompt.includes('minimum')) {
+      return 'min';
+    }
+    if (lowerPrompt.includes('max') || lowerPrompt.includes('maximum')) {
+      return 'max';
+    }
+    if (lowerPrompt.includes('sum') || lowerPrompt.includes('total')) {
+      return 'add';
+    }
+    
+    // Field extraction with enhanced patterns
+    const fieldPatterns = [
+      /get\s+([a-zA-Z_][a-zA-Z0-9_]*)/i,  // "get fieldname"
+      /show\s+([a-zA-Z_][a-zA-Z0-9_]*)/i,  // "show fieldname"
+      /extract\s+([a-zA-Z_][a-zA-Z0-9_]*)/i,  // "extract fieldname"
+      /([a-zA-Z_][a-zA-Z0-9_]*)\s+(field|property|attribute|value)/i,  // "fieldname field"
+      /["']([a-zA-Z_][a-zA-Z0-9_]*)["']/,  // "fieldname" in quotes
+      /\.([a-zA-Z_][a-zA-Z0-9_]*)/  // .fieldname format
+    ];
+    
+    for (const pattern of fieldPatterns) {
+      const match = originalPrompt.match(pattern);
+      if (match && match[1]) {
+        const fieldName = match[1];
+        // Check if it's asking for array of field values
+        if (lowerPrompt.includes('all') || lowerPrompt.includes('every')) {
+          return `.[].${fieldName}`;
+        }
+        return `.${fieldName}`;
+      }
+    }
+    
+    // Complex operations
+    if (lowerPrompt.includes('group') || lowerPrompt.includes('group by')) {
+      return 'group_by(.)';
+    }
+    if (lowerPrompt.includes('map') || lowerPrompt.includes('transform')) {
+      return 'map(.)';
+    }
+    if (lowerPrompt.includes('has') || lowerPrompt.includes('contains')) {
+      const fieldMatch = originalPrompt.match(/has\s+([a-zA-Z_][a-zA-Z0-9_]*)/i);
+      if (fieldMatch) {
+        return `has("${fieldMatch[1]}")`;
+      }
+      return 'has("key")';
+    }
+    
+    // Default fallback
     return '.';
   }
 
