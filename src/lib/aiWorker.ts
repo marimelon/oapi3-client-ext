@@ -361,16 +361,35 @@ class AIWorker {
 
   /**
    * Format prompt using SmolLM3-3B official chat template
-   * Template: <|im_start|>system\n{system_message}<|im_end|>\n<|im_start|>user\n{user_message}<|im_end|>\n<|im_start|>assistant\n
+   * Based on official chat_template.jinja from HuggingFace
    */
   private formatSmolLMPrompt(userPrompt: string): string {
-    const systemMessage = "You are a helpful assistant that generates jq queries. Generate only the jq query without any explanation.";
+    const today = new Date().toLocaleDateString('en-GB', { 
+      day: 'numeric',
+      month: 'long', 
+      year: 'numeric' 
+    });
     
+    const customInstructions = "You are a helpful assistant that generates jq queries. Generate only the jq query without any explanation.";
+
     const template = `<|im_start|>system
-${systemMessage}<|im_end|>
+## Metadata
+
+Knowledge Cutoff Date: June 2025
+Today Date: ${today}
+Reasoning Mode: /no_think
+
+## Custom Instructions
+
+${customInstructions}
+
+<|im_end|>
 <|im_start|>user
 Generate a jq query for: ${userPrompt}<|im_end|>
 <|im_start|>assistant
+<think>
+
+</think>
 `;
     
     return template;

@@ -404,16 +404,36 @@ jq query:`;
 
   /**
    * Format prompt using SmolLM3-3B official chat template for debug purposes
+   * Based on official chat_template.jinja from HuggingFace
    * @private
    */
   private formatSmolLMDebugPrompt(userPrompt: string): string {
-    const systemMessage = "You are a helpful assistant. Respond directly and concisely.";
+    const today = new Date().toLocaleDateString('en-GB', { 
+      day: 'numeric',
+      month: 'long', 
+      year: 'numeric' 
+    });
     
+    const customInstructions = "You are a helpful assistant. Respond directly and concisely.";
+
     const template = `<|im_start|>system
-${systemMessage}<|im_end|>
+## Metadata
+
+Knowledge Cutoff Date: June 2025
+Today Date: ${today}
+Reasoning Mode: /no_think
+
+## Custom Instructions
+
+${customInstructions}
+
+<|im_end|>
 <|im_start|>user
 ${userPrompt}<|im_end|>
 <|im_start|>assistant
+<think>
+
+</think>
 `;
     
     return template;
