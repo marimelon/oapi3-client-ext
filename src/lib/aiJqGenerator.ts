@@ -18,9 +18,10 @@ interface PendingMessage {
 }
 
 interface ModelConfig {
-  model: string;
-  device: string;
-  dtype: string;
+  modelUrl: string;
+  tokenizerModel: string;
+  maxLength: number;
+  executionProviders: string[];
 }
 
 interface GenerationOptions {
@@ -32,9 +33,10 @@ interface GenerationOptions {
 
 // Constants
 const DEFAULT_MODEL_CONFIG: ModelConfig = {
-  model: 'HuggingFaceTB/SmolLM3-3B-ONNX',
-  device: 'webgpu',
-  dtype: 'q4f16'
+  modelUrl: 'https://huggingface.co/HuggingFaceTB/SmolLM-135M-Instruct-ONNX/resolve/main/model_q4f16.onnx',
+  tokenizerModel: 'HuggingFaceTB/SmolLM-135M-Instruct',
+  maxLength: 512,
+  executionProviders: ['webgpu', 'wasm']
 };
 
 const DEFAULT_GENERATION_OPTIONS: GenerationOptions = {
@@ -175,6 +177,12 @@ export class AIJqGenerator {
    */
   private cleanup(): void {
     if (this.worker) {
+      // Send dispose message to worker before terminating
+      try {
+        this.sendMessage('dispose').catch(() => {});
+      } catch (e) {
+        // Ignore errors during cleanup
+      }
       this.worker.terminate();
       this.worker = null;
     }
@@ -425,8 +433,18 @@ jq query:`;
    */
   private terminateWorker(): void {
     if (this.worker) {
-      this.worker.terminate();
-      this.worker = null;
+      // Send dispose message to worker before terminating
+      try {
+        this.sendMessage('dispose').catch(() => {});
+      } catch (e) {
+        // Ignore errors during cleanup
+      }
+      setTimeout(() => {
+        if (this.worker) {
+          this.worker.terminate();
+          this.worker = null;
+        }
+      }, 100); // Give worker time to clean up
     }
   }
 

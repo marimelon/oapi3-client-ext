@@ -163,10 +163,19 @@ interface SavedRequest {
 **Natural Language to jq Query**: Generate jq queries using AI from natural language descriptions.
 
 **Architecture:**
-- **AIJqGenerator Service**: Singleton service managing transformers.js model loading and inference
-- **Model**: Uses HuggingFaceTB/SmolLM3-3B-ONNX for powerful browser-based generation
+- **AIJqGenerator Service**: Singleton service managing ONNX Runtime Web model loading and inference
+- **Model**: Uses HuggingFaceTB/SmolLM-135M-Instruct-ONNX for efficient browser-based generation
+- **Runtime**: ONNX Runtime Web with WebGPU acceleration for optimal performance
+- **Tokenization**: @xenova/transformers tokenizer for text preprocessing
+- **Web Worker**: Model loading and inference run in dedicated worker thread for non-blocking UI
 - **On-demand Loading**: Model loads only when AI feature is first used
-- **WebGPU Acceleration**: Leverages WebGPU for faster inference when available
+
+**Technical Implementation:**
+- **ONNX Runtime Web**: Utilizes latest ONNX Runtime 1.17+ with WebGPU backend support
+- **Model Format**: Quantized ONNX model (q4f16) for optimal size/performance balance
+- **Fallback Support**: WebGPU → WASM execution provider fallback for broad compatibility
+- **Memory Management**: Proper tensor cleanup and session disposal to prevent memory leaks
+- **Caching**: Models cached in browser IndexedDB for faster subsequent loads
 
 **Features:**
 - **AI Button**: Located next to jq query input field with computer/monitor icon
