@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AIJqGenerator } from '../../lib/aiJqGenerator';
 
 interface LLMDebugPanelProps {
@@ -13,7 +13,42 @@ export const LLMDebugPanel: React.FC<LLMDebugPanelProps> = ({ isOpen, onClose })
   const [error, setError] = useState<string | null>(null);
   const [temperature, setTemperature] = useState(0.1);
   const [maxTokens, setMaxTokens] = useState(100);
+  const [isInitializing, setIsInitializing] = useState(false);
+  const [modelStatus, setModelStatus] = useState<'not-initialized' | 'loading' | 'ready'>('not-initialized');
   const generator = AIJqGenerator.getInstance();
+
+  // Update model status
+  useEffect(() => {
+    const updateStatus = () => {
+      if (generator.isReady()) {
+        setModelStatus('ready');
+      } else if (generator.isModelLoading()) {
+        setModelStatus('loading');
+      } else {
+        setModelStatus('not-initialized');
+      }
+    };
+
+    updateStatus();
+    // Check status every second while panel is open
+    const interval = isOpen ? setInterval(updateStatus, 1000) : null;
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isOpen, generator]);
+
+  const handleInitialize = async () => {
+    setIsInitializing(true);
+    setError(null);
+    try {
+      await generator.initialize();
+      setModelStatus('ready');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to initialize model');
+    } finally {
+      setIsInitializing(false);
+    }
+  };
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
@@ -109,14 +144,24 @@ export const LLMDebugPanel: React.FC<LLMDebugPanelProps> = ({ isOpen, onClose })
             />
           </div>
 
-          {/* Generate Button */}
-          <button
-            onClick={handleGenerate}
-            disabled={!prompt.trim() || isGenerating || !generator.isReady()}
-            className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isGenerating ? 'Generating...' : 'Generate'}
-          </button>
+          {/* Generate/Initialize Button */}
+          {modelStatus === 'not-initialized' ? (
+            <button
+              onClick={handleInitialize}
+              disabled={isInitializing}
+              className="w-full px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isInitializing ? 'Initializing Model...' : 'Initialize Model'}
+            </button>
+          ) : (
+            <button
+              onClick={handleGenerate}
+              disabled={!prompt.trim() || isGenerating || modelStatus !== 'ready'}
+              className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isGenerating ? 'Generating...' : modelStatus === 'loading' ? 'Model Loading...' : 'Generate'}
+            </button>
+          )}
 
           {/* Error Display */}
           {error && (
@@ -142,7 +187,11 @@ export const LLMDebugPanel: React.FC<LLMDebugPanelProps> = ({ isOpen, onClose })
           {/* Debug Info */}
           <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
             <p>Model: HuggingFaceTB/SmolLM3-3B-ONNX (q4f16)</p>
-            <p>Status: {generator.isReady() ? '✅ Ready' : generator.isModelLoading() ? '⏳ Loading...' : '❌ Not initialized'}</p>
+            <p>Status: {
+              modelStatus === 'ready' ? '✅ Ready' : 
+              modelStatus === 'loading' ? '⏳ Loading...' : 
+              '❌ Not initialized'
+            }</p>
           </div>
         </div>
       </div>

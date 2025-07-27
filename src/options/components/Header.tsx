@@ -1,13 +1,20 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAppContext } from '../../context/AppContext'
 import { useStorage } from '../../hooks/useStorage'
 import { LLMDebugPanel } from './LLMDebugPanel'
+import { AIJqGenerator } from '../../lib/aiJqGenerator'
 
 export default function Header() {
   const { state } = useAppContext()
   const { clearRequestHistory } = useStorage()
   const [showSettings, setShowSettings] = useState(false)
   const [showLLMDebug, setShowLLMDebug] = useState(false)
+
+  // Initialize AI generator instance on mount
+  useEffect(() => {
+    // Just getting the instance will trigger the constructor and expose debug methods
+    AIJqGenerator.getInstance();
+  }, []);
 
   const handleClearHistory = async () => {
     if (confirm('Are you sure you want to clear all request history?')) {
