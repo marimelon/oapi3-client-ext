@@ -31,10 +31,10 @@ interface GenerationOptions {
   top_p: number;
 }
 
-// Constants - Use proven working model for browser compatibility
+// Constants - Use HuggingFaceTB/SmolLM3-3B-ONNX as requested
 const DEFAULT_MODEL_CONFIG: ModelConfig = {
-  modelUrl: 'https://huggingface.co/Xenova/gpt2/resolve/main/onnx/model_quantized.onnx',
-  tokenizerModel: 'Xenova/gpt2', // Use matching tokenizer
+  modelUrl: 'https://huggingface.co/HuggingFaceTB/SmolLM3-3B-ONNX/resolve/main/onnx/model_q4.onnx',
+  tokenizerModel: 'HuggingFaceTB/SmolLM3-3B', // Use matching tokenizer
   maxLength: 512,
   executionProviders: ['wasm', 'webgpu']
 };
@@ -47,11 +47,6 @@ const DEFAULT_GENERATION_OPTIONS: GenerationOptions = {
 };
 
 const JSON_SAMPLE_MAX_LENGTH = 500;
-const JQ_QUERY_PATTERNS = [
-  /jq query:/i,
-  /Query:/i,
-  /^\s*\./
-];
 
 /**
  * AI-powered jq query generator using a web worker for model inference.
@@ -338,69 +333,15 @@ jq query:`;
   }
 
   /**
-   * Extract jq query from generated text.
+   * Use LLM generated text directly without any processing
    * @private
    */
   private extractJqQuery(generatedText: string): string {
-    // Try to find query in a labeled line first
-    const queryFromLine = this.extractQueryFromLine(generatedText);
-    if (queryFromLine) {
-      return queryFromLine;
-    }
-
-    // Fallback to detecting query-like patterns
-    const queryFromPattern = this.extractQueryFromPattern(generatedText);
-    if (queryFromPattern) {
-      return queryFromPattern;
-    }
-
-    // Default fallback
-    return '.';
+    // Use LLM output directly as requested
+    console.log('📝 Using LLM output directly:', generatedText);
+    return generatedText;
   }
 
-  /**
-   * Extract query from lines containing specific labels.
-   * @private
-   */
-  private extractQueryFromLine(generatedText: string): string | null {
-    const lines = generatedText.split('\n');
-    const queryLine = lines.find(line => 
-      JQ_QUERY_PATTERNS.some(pattern => pattern.test(line))
-    );
-
-    if (queryLine) {
-      const query = queryLine
-        .replace(/^.*?(jq query:|Query:)\s*/i, '')
-        .replace(/```.*$/g, '')
-        .trim();
-      
-      return query || null;
-    }
-
-    return null;
-  }
-
-  /**
-   * Extract query from text patterns that look like jq queries.
-   * @private
-   */
-  private extractQueryFromPattern(generatedText: string): string | null {
-    const trimmed = generatedText.trim();
-    
-    if (this.looksLikeJqQuery(trimmed)) {
-      return trimmed.split('\n')[0].trim();
-    }
-
-    return null;
-  }
-
-  /**
-   * Check if text looks like a jq query.
-   * @private
-   */
-  private looksLikeJqQuery(text: string): boolean {
-    return text.startsWith('.') || text.startsWith('[') || text.startsWith('{');
-  }
 
   /**
    * Check if the model is ready for use.
