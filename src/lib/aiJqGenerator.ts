@@ -18,10 +18,9 @@ interface PendingMessage {
 }
 
 interface ModelConfig {
-  modelUrl: string;
-  tokenizerModel: string;
+  modelId: string;
   maxLength: number;
-  executionProviders: string[];
+  device: string;
 }
 
 interface GenerationOptions {
@@ -31,12 +30,11 @@ interface GenerationOptions {
   top_p: number;
 }
 
-// Constants - Use HuggingFaceTB/SmolLM3-3B-ONNX as requested
+// Constants - Use HuggingFaceTB/SmolLM3-3B with transformers.js
 const DEFAULT_MODEL_CONFIG: ModelConfig = {
-  modelUrl: 'https://huggingface.co/HuggingFaceTB/SmolLM3-3B-ONNX/resolve/main/onnx/model_q4.onnx',
-  tokenizerModel: 'HuggingFaceTB/SmolLM3-3B-ONNX', // Use matching tokenizer
+  modelId: 'HuggingFaceTB/SmolLM3-3B', // Use the base model for transformers.js
   maxLength: 512,
-  executionProviders: ['wasm', 'webgpu']
+  device: 'webgpu'
 };
 
 const DEFAULT_GENERATION_OPTIONS: GenerationOptions = {
