@@ -33,10 +33,10 @@ interface GenerationOptions {
 
 // Constants
 const DEFAULT_MODEL_CONFIG: ModelConfig = {
-  modelUrl: 'https://huggingface.co/HuggingFaceTB/SmolLM-135M-Instruct-ONNX/resolve/main/model_q4f16.onnx',
-  tokenizerModel: 'HuggingFaceTB/SmolLM-135M-Instruct',
+  modelUrl: 'https://huggingface.co/Xenova/LaMini-Flan-T5-783M-ONNX/resolve/main/onnx/model_quantized.onnx',
+  tokenizerModel: 'Xenova/LaMini-Flan-T5-783M',
   maxLength: 512,
-  executionProviders: ['webgpu', 'wasm']
+  executionProviders: ['wasm', 'webgpu']
 };
 
 const DEFAULT_GENERATION_OPTIONS: GenerationOptions = {
