@@ -1,5 +1,10 @@
 import * as ort from 'onnxruntime-web';
-import { AutoTokenizer } from '@xenova/transformers';
+import { AutoTokenizer, env } from '@xenova/transformers';
+
+// Configure @xenova/transformers to use remote models from Hugging Face
+env.allowRemoteModels = true;
+env.allowLocalModels = false;
+env.useBrowserCache = true;
 
 // Configure ONNX Runtime for web worker environment
 ort.env.wasm.numThreads = 1;
@@ -54,8 +59,11 @@ class AIWorker {
     try {
       console.log('Initializing SmolLM3-3B-ONNX model...');
       
-      // Initialize tokenizer
-      const tokenizer = await AutoTokenizer.from_pretrained(payload.tokenizerModel);
+      // Initialize tokenizer from Hugging Face Hub
+      const tokenizer = await AutoTokenizer.from_pretrained(payload.tokenizerModel, {
+        cache_dir: './.cache',
+        local_files_only: false
+      });
       
       // For SmolLM3-3B-ONNX, we need to download the data file as well
       // The model has a separate .onnx_data file that contains the weights
