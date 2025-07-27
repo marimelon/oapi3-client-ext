@@ -176,13 +176,16 @@ class AIWorker {
       for (const inputName of session.inputNames) {
         if (inputName.startsWith('past_key_values.')) {
           // Initialize empty past_key_values tensors for first generation
-          // These will be populated by the model's output for subsequent generations
-          // The shape depends on the model architecture - for SmolLM3-3B it's typically:
-          // [batch_size, num_heads, 0, head_dim] for initial empty cache
+          // SmolLM3-3B expects shape: [batch_size, num_heads, seq_len, head_dim]
+          // From the error, we know: num_heads=4, head_dim=128
+          // For initial generation, seq_len=0 (no past tokens)
           
-          // Since we don't have past values yet, we'll pass empty tensors
-          // The model will generate these for us
-          const emptyTensor = new ort.Tensor('float32', new Float32Array(0), [batchSize, 1, 0, 1]);
+          const numHeads = 4;
+          const headDim = 128;
+          const pastSeqLen = 0; // No past tokens for initial generation
+          
+          // Create empty tensor with correct shape
+          const emptyTensor = new ort.Tensor('float32', new Float32Array(0), [batchSize, numHeads, pastSeqLen, headDim]);
           feeds[inputName] = emptyTensor;
         }
       }
