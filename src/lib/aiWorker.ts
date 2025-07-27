@@ -143,11 +143,21 @@ class AIWorker {
       const inputIds = new ort.Tensor('int64', inputs.input_ids.data, inputs.input_ids.dims);
       const attentionMask = new ort.Tensor('int64', inputs.attention_mask.data, inputs.attention_mask.dims);
 
+      // Create position_ids tensor
+      const [batchSize, seqLength] = inputs.input_ids.dims;
+      const positionIds = new BigInt64Array(batchSize * seqLength);
+      for (let i = 0; i < batchSize; i++) {
+        for (let j = 0; j < seqLength; j++) {
+          positionIds[i * seqLength + j] = BigInt(j);
+        }
+      }
+      const positionIdsTensor = new ort.Tensor('int64', positionIds, [batchSize, seqLength]);
+
       // Check what inputs the model actually expects
       console.log('Model input names:', session.inputNames);
       console.log('Model output names:', session.outputNames);
 
-      // Build feeds object based on what the model expects - DistilBERT only needs input_ids and attention_mask
+      // Build feeds object based on what the model expects
       const feeds: Record<string, ort.Tensor> = {};
 
       // Add only the inputs that the model expects
@@ -156,6 +166,9 @@ class AIWorker {
       }
       if (session.inputNames.includes('attention_mask')) {
         feeds.attention_mask = attentionMask;
+      }
+      if (session.inputNames.includes('position_ids')) {
+        feeds.position_ids = positionIdsTensor;
       }
 
       console.log('Prepared feeds for model inputs:', Object.keys(feeds));
