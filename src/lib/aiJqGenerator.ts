@@ -31,10 +31,10 @@ interface GenerationOptions {
   top_p: number;
 }
 
-// Constants
+// Constants - Use smaller SmolLM-135M for better browser compatibility
 const DEFAULT_MODEL_CONFIG: ModelConfig = {
-  modelUrl: 'https://huggingface.co/HuggingFaceTB/SmolLM3-3B-ONNX/resolve/main/onnx/model_q4.onnx',
-  tokenizerModel: 'HuggingFaceTB/SmolLM2-1.7B-Instruct', // Use compatible tokenizer
+  modelUrl: 'https://huggingface.co/Xenova/SmolLM-135M-Instruct-ONNX/resolve/main/onnx/model_quantized.onnx',
+  tokenizerModel: 'HuggingFaceTB/SmolLM-135M-Instruct', // Use matching tokenizer
   maxLength: 512,
   executionProviders: ['wasm', 'webgpu']
 };

@@ -127,12 +127,21 @@ class AIWorker {
         tokenizer,
         maxLength: payload.maxLength || 512
       };
+      
+      console.log('✅ Model and tokenizer loaded successfully!');
     } catch (error) {
-      console.error('Failed to initialize model:', error);
+      console.error('❌ Failed to initialize model:', error);
+      console.error('Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : 'No stack trace',
+        errorCode: typeof error === 'number' ? error : 'Not a numeric error code'
+      });
+      
       // Fall back to heuristic approach if model loading fails
+      console.log('🔄 Falling back to heuristic-based jq generation');
       this.modelSession = {
         session: null as any,
-        tokenizer: null as any,
+        tokenizer: null as any,  // Model failed, tokenizer may also be undefined
         maxLength: payload.maxLength || 512
       };
     } finally {
