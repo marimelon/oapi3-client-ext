@@ -163,8 +163,8 @@ class AIWorker {
         return this.generateBasicJqQuery(prompt);
       }
       
-      // Format prompt for SmolLM3
-      const formattedPrompt = `Generate a jq query for: ${prompt}\n\njq query:`;
+      // Format prompt for GPT-2 model (text generation)
+      const formattedPrompt = `# jq Query Generator\nHuman: ${prompt}\nAssistant: Here's the jq query:`;
       
       // Tokenize input
       const inputs = await tokenizer(formattedPrompt, {

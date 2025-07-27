@@ -31,10 +31,10 @@ interface GenerationOptions {
   top_p: number;
 }
 
-// Constants - Use smaller SmolLM-135M for better browser compatibility
+// Constants - Use proven working model for browser compatibility
 const DEFAULT_MODEL_CONFIG: ModelConfig = {
-  modelUrl: 'https://huggingface.co/Xenova/SmolLM-135M-Instruct-ONNX/resolve/main/onnx/model_quantized.onnx',
-  tokenizerModel: 'HuggingFaceTB/SmolLM-135M-Instruct', // Use matching tokenizer
+  modelUrl: 'https://huggingface.co/Xenova/gpt2/resolve/main/onnx/model_quantized.onnx',
+  tokenizerModel: 'Xenova/gpt2', // Use matching tokenizer
   maxLength: 512,
   executionProviders: ['wasm', 'webgpu']
 };
