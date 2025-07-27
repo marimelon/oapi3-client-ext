@@ -34,7 +34,7 @@ interface GenerationOptions {
 // Constants
 const DEFAULT_MODEL_CONFIG: ModelConfig = {
   modelUrl: 'https://huggingface.co/HuggingFaceTB/SmolLM3-3B-ONNX/resolve/main/onnx/model_q4.onnx',
-  tokenizerModel: 'HuggingFaceTB/SmolLM3-3B',
+  tokenizerModel: 'HuggingFaceTB/SmolLM2-1.7B-Instruct', // Use compatible tokenizer
   maxLength: 512,
   executionProviders: ['wasm', 'webgpu']
 };

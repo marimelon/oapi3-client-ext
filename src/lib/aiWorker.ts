@@ -59,11 +59,42 @@ class AIWorker {
     try {
       console.log('Initializing SmolLM3-3B-ONNX model...');
       
-      // Initialize tokenizer from Hugging Face Hub
-      const tokenizer = await AutoTokenizer.from_pretrained(payload.tokenizerModel, {
-        cache_dir: './.cache',
-        local_files_only: false
-      });
+      // Initialize tokenizer from Hugging Face Hub with fallback
+      let tokenizer;
+      try {
+        tokenizer = await AutoTokenizer.from_pretrained(payload.tokenizerModel, {
+          cache_dir: './.cache',
+          local_files_only: false
+        });
+        console.log('Tokenizer loaded successfully:', payload.tokenizerModel);
+      } catch (tokenizerError) {
+        console.warn('Failed to load primary tokenizer, trying fallback...', tokenizerError);
+        
+        // Try with a known working tokenizer
+        const fallbackTokenizers = [
+          'HuggingFaceTB/SmolLM-135M-Instruct',
+          'microsoft/DialoGPT-medium',
+          'gpt2'
+        ];
+        
+        for (const fallbackModel of fallbackTokenizers) {
+          try {
+            tokenizer = await AutoTokenizer.from_pretrained(fallbackModel, {
+              cache_dir: './.cache',
+              local_files_only: false
+            });
+            console.log('Fallback tokenizer loaded successfully:', fallbackModel);
+            break;
+          } catch (fallbackError) {
+            console.warn('Fallback tokenizer failed:', fallbackModel, fallbackError);
+            continue;
+          }
+        }
+        
+        if (!tokenizer) {
+          throw new Error('All tokenizer options failed');
+        }
+      }
       
       // For SmolLM3-3B-ONNX, we need to download the data file as well
       // The model has a separate .onnx_data file that contains the weights
