@@ -33,8 +33,8 @@ interface GenerationOptions {
 
 // Constants - Use HuggingFaceTB/SmolLM3-3B-ONNX as requested
 const DEFAULT_MODEL_CONFIG: ModelConfig = {
-  modelUrl: 'https://huggingface.co/HuggingFaceTB/SmolLM3-3B-ONNX/resolve/main/onnx/model_q4.onnx',
-  tokenizerModel: 'HuggingFaceTB/SmolLM3-3B', // Use matching tokenizer
+  modelUrl: 'https://huggingface.co/HuggingFaceTB/SmolLM3-3B-ONNX/resolve/main/onnx/model_q4f16.onnx',
+  tokenizerModel: 'HuggingFaceTB/SmolLM3-3B-ONNX', // Use matching tokenizer
   maxLength: 512,
   executionProviders: ['wasm', 'webgpu']
 };
@@ -61,7 +61,24 @@ export class AIJqGenerator {
   private messageId = 0;
   private pendingMessages = new Map<string, PendingMessage>();
 
-  private constructor() {}
+  private constructor() {
+    // Expose debug method to window for console testing
+    if (typeof window !== 'undefined') {
+      (window as any).__llmDebug = async (prompt: string, options?: any) => {
+        console.log('🐛 Initializing LLM if needed...');
+        try {
+          await this.initialize();
+          return await this.debugGenerateLLM(prompt, options);
+        } catch (error) {
+          console.error('🐛 Debug error:', error);
+          throw error;
+        }
+      };
+      (window as any).__llmGenerator = this;
+      console.log('🐛 LLM Debug: Use window.__llmDebug(prompt, options?) in console');
+      console.log('🐛 LLM Generator instance: window.__llmGenerator');
+    }
+  }
 
   /**
    * Get the singleton instance of AIJqGenerator.
@@ -84,7 +101,7 @@ export class AIJqGenerator {
 
     this.isLoading = true;
     this.loadingPromise = this.initializeWorker();
-    
+
     try {
       await this.loadingPromise;
     } catch (error) {
@@ -138,7 +155,7 @@ export class AIJqGenerator {
   private handleWorkerMessage(data: WorkerResponse): void {
     const { type, id, result, error } = data;
     const pending = this.pendingMessages.get(id);
-    
+
     if (pending) {
       this.pendingMessages.delete(id);
       if (type === 'success') {
@@ -174,7 +191,7 @@ export class AIJqGenerator {
     if (this.worker) {
       // Send dispose message to worker before terminating
       try {
-        this.sendMessage('dispose').catch(() => {});
+        this.sendMessage('dispose').catch(() => { });
       } catch (e) {
         // Ignore errors during cleanup
       }
@@ -221,9 +238,9 @@ export class AIJqGenerator {
    */
   async generateJqQuery(naturalLanguageInput: string, jsonSample?: any): Promise<string> {
     await this.ensureModelReady();
-    
+
     const prompt = this.buildPrompt(naturalLanguageInput, jsonSample);
-    
+
     try {
       const generatedText = await this.generateText(prompt);
       return this.extractJqQuery(generatedText);
@@ -266,7 +283,7 @@ export class AIJqGenerator {
     const basePrompt = this.getBasePrompt(naturalLanguageInput);
     const samplePrompt = this.buildJsonSamplePrompt(jsonSample);
     const instructionPrompt = this.getInstructionPrompt();
-    
+
     return basePrompt + samplePrompt + instructionPrompt;
   }
 
@@ -293,7 +310,7 @@ Request: ${naturalLanguageInput}
 
     const sampleStr = this.formatJsonSample(jsonSample);
     const truncatedSample = this.truncateJsonSample(sampleStr);
-    
+
     return `JSON sample:
 \`\`\`json
 ${truncatedSample}
@@ -307,8 +324,8 @@ ${truncatedSample}
    * @private
    */
   private formatJsonSample(jsonSample: any): string {
-    return typeof jsonSample === 'string' 
-      ? jsonSample 
+    return typeof jsonSample === 'string'
+      ? jsonSample
       : JSON.stringify(jsonSample, null, 2);
   }
 
@@ -317,7 +334,7 @@ ${truncatedSample}
    * @private
    */
   private truncateJsonSample(sampleStr: string): string {
-    return sampleStr.length > JSON_SAMPLE_MAX_LENGTH 
+    return sampleStr.length > JSON_SAMPLE_MAX_LENGTH
       ? sampleStr.substring(0, JSON_SAMPLE_MAX_LENGTH) + '...'
       : sampleStr;
   }
@@ -342,6 +359,43 @@ jq query:`;
     return generatedText;
   }
 
+
+  /**
+   * Debug method to directly use LLM for testing purposes.
+   * This bypasses the normal jq query prompt formatting.
+   * @param prompt Raw prompt to send to the LLM
+   * @param options Optional generation options
+   * @returns Raw LLM output
+   * @throws {Error} If generation fails
+   */
+  async debugGenerateLLM(
+    prompt: string, 
+    options?: Partial<GenerationOptions>
+  ): Promise<string> {
+    await this.ensureModelReady();
+    
+    console.log('🐛 DEBUG: Direct LLM generation');
+    console.log('🐛 DEBUG: Prompt:', prompt);
+    console.log('🐛 DEBUG: Options:', options || 'default');
+    
+    try {
+      const generationOptions = {
+        ...DEFAULT_GENERATION_OPTIONS,
+        ...options
+      };
+      
+      const result = await this.sendMessage('generate', {
+        prompt,
+        options: generationOptions
+      });
+      
+      console.log('🐛 DEBUG: Raw LLM output:', result);
+      return result;
+    } catch (error) {
+      console.error('🐛 DEBUG: LLM generation failed:', error);
+      throw new Error(`Debug LLM generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
 
   /**
    * Check if the model is ready for use.
@@ -376,7 +430,7 @@ jq query:`;
     if (this.worker) {
       // Send dispose message to worker before terminating
       try {
-        this.sendMessage('dispose').catch(() => {});
+        this.sendMessage('dispose').catch(() => { });
       } catch (e) {
         // Ignore errors during cleanup
       }

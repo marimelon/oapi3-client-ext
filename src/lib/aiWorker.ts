@@ -57,7 +57,11 @@ class AIWorker {
       console.log('Initializing SmolLM3-3B-ONNX model...');
 
       // Initialize tokenizer from Hugging Face Hub
-      const tokenizer = await AutoTokenizer.from_pretrained(payload.tokenizerModel);
+      const tokenizer = await AutoTokenizer.from_pretrained(payload.tokenizerModel, {
+        config: {
+          "transformers.js_config": { dtype: "q4f16" }
+        } as any
+      });
       console.log('Tokenizer loaded successfully:', payload.tokenizerModel);
 
       // Configure execution providers for browser compatibility
@@ -74,8 +78,8 @@ class AIWorker {
         logVerbosityLevel: 0,
         externalData: [
           {
-            path: "./model_q4.onnx_data",
-            data: "https://huggingface.co/HuggingFaceTB/SmolLM3-3B-ONNX/resolve/main/onnx/model_q4.onnx_data" as any
+            path: "./model_q4f16.onnx_data",
+            data: "https://huggingface.co/HuggingFaceTB/SmolLM3-3B-ONNX/resolve/main/onnx/model_q4f16.onnx_data" as any
           }
         ]
       });
@@ -135,7 +139,7 @@ class AIWorker {
         return_tensors: true,
         padding: true,
         truncation: true,
-        max_length: 256
+        max_length: 256,
       });
 
       console.log('Tokenized input shape:', inputs.input_ids.dims);
@@ -180,13 +184,13 @@ class AIWorker {
           // SmolLM3-3B expects shape: [batch_size, num_heads, seq_len, head_dim]
           // From the error, we know: num_heads=4, head_dim=128
           // For initial generation, seq_len=0 (no past tokens)
-          
+
           const numHeads = 4;
           const headDim = 128;
           const pastSeqLen = 0; // No past tokens for initial generation
-          
+
           // Create empty tensor with correct shape
-          const emptyTensor = new ort.Tensor('float32', new Float32Array(0), [batchSize, numHeads, pastSeqLen, headDim]);
+          const emptyTensor = new ort.Tensor('float16', (new Float16Array(0)) as any, [batchSize, numHeads, pastSeqLen, headDim]);
           feeds[inputName] = emptyTensor;
         }
       }
@@ -245,10 +249,13 @@ class AIWorker {
       const [batchSize, seqLen, vocabSize] = logits.dims;
 
       console.log('📊 Decoding sequence - batch:', batchSize, 'seq:', seqLen, 'vocab:', vocabSize);
+      console.log('📊 Logit data length:', logitData.length);
 
       // Start from the last position in the sequence
       const lastPosition = seqLen - 1;
       const startIdx = lastPosition * vocabSize;
+
+      console.log('📊 Last position:', lastPosition, 'Start index:', startIdx);
 
       if (startIdx >= logitData.length) {
         console.warn('Invalid position for decoding');
@@ -257,22 +264,54 @@ class AIWorker {
 
       // Get logits for the last position
       const positionLogits = Array.from(logitData.slice(startIdx, startIdx + vocabSize));
+      console.log('📊 Position logits length:', positionLogits.length);
 
-      // Find top tokens using greedy decoding
-      const topIndices = positionLogits
+      // Get all tokens sorted by logit value
+      const allIndices = positionLogits
         .map((logit, index) => ({ logit, index }))
-        .sort((a, b) => b.logit - a.logit)
-        .slice(0, 10); // Get top 10 tokens
+        .sort((a, b) => b.logit - a.logit);
+
+      console.log('🔝 Total tokens to decode:', allIndices.length);
+      console.log('🔝 Top 10 token indices and logits:');
+      allIndices.slice(0, 10).forEach((item, idx) => {
+        console.log(`  ${idx + 1}. Token ID: ${item.index}, Logit: ${item.logit.toFixed(4)}`);
+      });
 
       // Decode tokens to text
       const decodedTokens: string[] = [];
-      for (const { index: tokenId } of topIndices) {
+      console.log('🔤 Attempting to decode tokens...');
+      console.log('📚 Tokenizer:', tokenizer);
+      console.log('📚 Tokenizer decode method:', typeof tokenizer.decode);
+      console.log('📚 Tokenizer model:', tokenizer.model ? 'exists' : 'missing');
+      console.log('📚 Tokenizer vocab:', tokenizer.model?.vocab ? `exists (${Array.isArray(tokenizer.model.vocab) ? 'array' : typeof tokenizer.model.vocab})` : 'missing');
+      // Decode all tokens
+      console.log('🔤 Decoding all', allIndices.length, 'tokens...');
+      for (const { index: tokenId, logit } of allIndices) {
         try {
           // Simple token decoding - in a real implementation you'd use tokenizer.decode()
-          if (tokenizer.model?.vocab && Array.isArray(tokenizer.model.vocab)) {
+          // Try using tokenizer's decode method if available
+          if (tokenizer.decode && typeof tokenizer.decode === 'function') {
+            const decoded = tokenizer.decode([tokenId]);
+            if (decoded) {
+              // Only log first 20 tokens to avoid spam
+              if (decodedTokens.length < 20) {
+                console.log(`  Token ${tokenId} (logit: ${logit.toFixed(2)}): "${decoded}"`);
+              }
+              decodedTokens.push(decoded);
+            }
+          } else if (tokenizer.model?.vocab && Array.isArray(tokenizer.model.vocab)) {
             const token = tokenizer.model.vocab[tokenId];
             if (token && typeof token === 'string') {
-              decodedTokens.push(token.replace(/Ġ/g, ' ').replace(/▁/g, ' ').trim());
+              const cleaned = token.replace(/Ġ/g, ' ').replace(/▁/g, ' ').trim();
+              // Only log first 20 tokens to avoid spam
+              if (decodedTokens.length < 20) {
+                console.log(`  Token ${tokenId} (logit: ${logit.toFixed(2)}): "${token}" → "${cleaned}"`);
+              }
+              decodedTokens.push(cleaned);
+            }
+          } else {
+            if (decodedTokens.length < 5) {
+              console.log(`  Token ${tokenId}: no decode method available`);
             }
           }
         } catch (e) {
@@ -288,9 +327,15 @@ class AIWorker {
         /[a-zA-Z.\[\]]/.test(token)
       );
 
-      console.log('🔤 Decoded tokens:', meaningfulTokens);
+      console.log('🔤 Total decoded tokens:', decodedTokens.length);
+      console.log('🔤 First 50 decoded tokens:', decodedTokens.slice(0, 50));
+      console.log('🔤 Meaningful tokens count:', meaningfulTokens.length);
+      console.log('🔤 First 50 meaningful tokens:', meaningfulTokens.slice(0, 50));
 
-      return meaningfulTokens.join(' ').trim();
+      const result = meaningfulTokens.join(' ').trim();
+      console.log('📝 Final decoded result:', `"${result}"`);
+      console.log('📝 Result length:', result.length);
+      return result;
 
     } catch (error) {
       console.error('Error in sequence decoding:', error);

@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { useAppContext } from '../../context/AppContext'
 import { useStorage } from '../../hooks/useStorage'
+import { LLMDebugPanel } from './LLMDebugPanel'
 
 export default function Header() {
   const { state } = useAppContext()
   const { clearRequestHistory } = useStorage()
   const [showSettings, setShowSettings] = useState(false)
+  const [showLLMDebug, setShowLLMDebug] = useState(false)
 
   const handleClearHistory = async () => {
     if (confirm('Are you sure you want to clear all request history?')) {
@@ -73,11 +75,27 @@ export default function Header() {
                 >
                   Manage Extensions
                 </button>
+                <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
+                <button
+                  onClick={() => {
+                    setShowLLMDebug(true)
+                    setShowSettings(false)
+                  }}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  🐛 LLM Debug Panel
+                </button>
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {/* LLM Debug Panel */}
+      <LLMDebugPanel 
+        isOpen={showLLMDebug} 
+        onClose={() => setShowLLMDebug(false)} 
+      />
     </header>
   )
 }
