@@ -71,7 +71,13 @@ class AIWorker {
         executionProviders,
         graphOptimizationLevel: 'all',
         logSeverityLevel: 3, // Warning level
-        logVerbosityLevel: 0
+        logVerbosityLevel: 0,
+        externalData: [
+          {
+            path: "./model_q4.onnx_data",
+            data: "https://huggingface.co/HuggingFaceTB/SmolLM3-3B-ONNX/resolve/main/onnx/model_q4.onnx_data" as any
+          }
+        ]
       });
 
       console.log('✅ ONNX model loaded successfully');
