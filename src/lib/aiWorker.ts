@@ -1,4 +1,30 @@
-import { pipeline } from '@huggingface/transformers';
+import { pipeline, env, SmolLM3ForCausalLM } from '@huggingface/transformers';
+import {
+  LogitsProcessorList,
+  TemperatureLogitsWarper,
+  TopKLogitsWarper,
+  TopPLogitsWarper,
+  RepetitionPenaltyLogitsProcessor,
+  NoRepeatNGramLogitsProcessor,
+  MinLengthLogitsProcessor,
+  ForcedBOSTokenLogitsProcessor,
+  ForcedEOSTokenLogitsProcessor,
+} from '@huggingface/transformers';
+import * as ort from 'onnxruntime-web';
+
+// @huggingface/transformers configuration not needed
+
+// Configure ONNX Runtime for web worker environment
+ort.env.wasm.numThreads = 1;
+ort.env.wasm.simd = true;
+
+// Set WASM paths explicitly for web worker context
+// Use CDN for WASM files to avoid Vite bundling issues
+ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/';
+
+// Disable remote model loading for security
+ort.env.logLevel = 'warning';
+
 
 // Configure transformers.js for web worker environment
 // Models will be downloaded from Hugging Face Hub
@@ -18,10 +44,11 @@ interface InitializePayload {
 interface ModelSession {
   pipeline: any; // Use any to avoid complex union types
   maxLength: number;
+  session: ort.InferenceSession;
 }
 
 interface GeneratePayload {
-  prompt: string | Array<{role: string, content: string}>;
+  prompt: string | Array<{ role: string, content: string }>;
   options: {
     max_new_tokens?: number;
     temperature?: number;
@@ -50,13 +77,35 @@ class AIWorker {
         dtype: 'q4f16'
       };
 
-      const textGenerator = await pipeline('text-generation', payload.modelId, pipelineConfig);
+      // env.allowLocalModels = true;
+      // env.localModelPath = 'http://127.0.0.1:8080';
+      // env.remoteHost = 'http://127.0.0.1:8080';
+
+      const textGenerator = await pipeline('text-generation', "HuggingFaceTB/SmolLM3-3B-ONNX", {
+        device: 'webgpu',
+        dtype: 'q4f16',
+        use_external_data_format: true
+      });
+
+      const session = await ort.InferenceSession.create("https://huggingface.co/HuggingFaceTB/SmolLM3-3B-ONNX/resolve/main/onnx/model_q4f16.onnx", {
+        // executionProviders: ['cpu'],
+        // graphOptimizationLevel: 'all',
+        // logSeverityLevel: 3, // Warning level
+        // logVerbosityLevel: 0,
+        externalData: [
+          {
+            path: "./model_q4f16.onnx_data",
+            data: "https://huggingface.co/HuggingFaceTB/SmolLM3-3B-ONNX/resolve/main/onnx/model_q4f16.onnx_data" as any
+          }
+        ]
+      });
 
       console.log('✅ Pipeline created successfully');
 
       this.modelSession = {
         pipeline: textGenerator,
-        maxLength: payload.maxLength || 512
+        maxLength: payload.maxLength || 512,
+        session: session
       };
 
       console.log('✅ SmolLM3-3B pipeline loaded successfully!');
@@ -80,7 +129,7 @@ class AIWorker {
     }
 
     const { prompt, options } = payload;
-    const { pipeline } = this.modelSession;
+    const { pipeline, session } = this.modelSession;
 
     try {
       // Prepare messages based on prompt type
@@ -102,6 +151,127 @@ class AIWorker {
       // Log the chat template for debugging
       const formattedTemplate = pipeline.tokenizer.apply_chat_template(messages);
       console.log('📝 Chat template output:', formattedTemplate);
+
+
+      const model = new SmolLM3ForCausalLM({ is_encoder_decoder: false }, session, pipeline.tokenizer);
+      const res = await model.generate({
+        ...formattedTemplate,
+        max_length: 100,
+        temperature: 0.8,
+        do_sample: true,
+        top_k: 50,
+        top_p: 0.95,
+        repetition_penalty: 1.2,
+        no_repeat_ngram_size: 3,
+      });
+
+      console.log('🔍 Generated text:', res);
+
+      const generator = new TextGeneratorWithLogitsProcessor(
+        session,
+        pipeline.tokenizer,
+        {
+          max_length: 100,
+          temperature: 0.8,
+          do_sample: true,
+          top_k: 50,
+          top_p: 0.95,
+          repetition_penalty: 1.2,
+          no_repeat_ngram_size: 3,
+          min_length: 10
+        }
+      );
+
+      // 初期入力
+      const input_text = "The future of AI is";
+      const inputs2 = pipeline.tokenizer(input_text, {
+        return_tensors: true,
+        padding: true,
+        truncation: true
+      });
+
+      // テキスト生成
+      const generated_text = await generator.generate({
+        input_ids: inputs2.input_ids,
+        attention_mask: inputs2.attention_mask
+      });
+
+      console.log("Generated:", generated_text);
+
+      return generated_text;
+
+      // --- ここから ORT のコード ---
+
+      const inputs = await pipeline.tokenizer(formattedTemplate, {
+        return_tensors: true,
+        padding: true,
+        truncation: true,
+        max_length: 256,
+      });
+
+      console.log('Inputs:', inputs);
+
+      const inputIds = new ort.Tensor('int64', inputs.input_ids.data, inputs.input_ids.dims);
+      const attentionMask = new ort.Tensor('int64', inputs.attention_mask.data, inputs.attention_mask.dims);
+      // Create position_ids tensor
+      const [batchSize, seqLength] = inputs.input_ids.dims;
+      const positionIds = new BigInt64Array(batchSize * seqLength);
+      for (let i = 0; i < batchSize; i++) {
+        for (let j = 0; j < seqLength; j++) {
+          positionIds[i * seqLength + j] = BigInt(j);
+        }
+      }
+      const positionIdsTensor = new ort.Tensor('int64', positionIds, [batchSize, seqLength]);
+
+
+      // Build feeds object based on what the model expects
+      const feeds: Record<string, ort.Tensor> = {};
+
+      // Add only the inputs that the model expects
+      if (session.inputNames.includes('input_ids')) {
+        feeds.input_ids = inputIds;
+      }
+      if (session.inputNames.includes('attention_mask')) {
+        feeds.attention_mask = attentionMask;
+      }
+      if (session.inputNames.includes('position_ids')) {
+        feeds.position_ids = positionIdsTensor;
+      }
+
+      console.log('Prepared feeds for model:', feeds);
+
+      // Add past_key_values if required by the model
+      // SmolLM3-3B uses past_key_values for caching in generation
+      for (const inputName of session.inputNames) {
+        if (inputName.startsWith('past_key_values.')) {
+          // Initialize empty past_key_values tensors for first generation
+          // SmolLM3-3B expects shape: [batch_size, num_heads, seq_len, head_dim]
+          // From the error, we know: num_heads=4, head_dim=128
+          // For initial generation, seq_len=0 (no past tokens)
+
+          const numHeads = 4;
+          const headDim = 128;
+          const pastSeqLen = 0; // No past tokens for initial generation
+
+          // Create empty tensor with correct shape
+          const emptyTensor = new ort.Tensor('float16', (new Float16Array(0)) as any, [batchSize, numHeads, pastSeqLen, headDim]);
+          feeds[inputName] = emptyTensor;
+        }
+      }
+
+      console.log('Prepared feeds for model inputs:', Object.keys(feeds));
+
+      console.log('Running ONNX inference...');
+      const output = await session.run(feeds);
+
+      console.log('ONNX inference completed');
+      console.log('Output:', output);
+
+      const decoded = pipeline.tokenizer.decode(output.logits);
+      console.log('Decoded:', decoded);
+
+
+      // --- ここまで ORT のコード ---
 
       // Generate text using transformers.js pipeline
       console.log('🚀 Running text generation with pipeline...');
@@ -231,3 +401,217 @@ self.addEventListener('message', async (event: MessageEvent<WorkerMessage>) => {
     });
   }
 });
+
+
+
+class TextGeneratorWithLogitsProcessor {
+  constructor(session, tokenizer, generation_config = {}) {
+    this.session = session;
+    this.tokenizer = tokenizer;
+    this.generation_config = {
+      max_length: 50,
+      temperature: 1.0,
+      do_sample: false,
+      top_k: 50,
+      top_p: 1.0,
+      repetition_penalty: 1.0,
+      no_repeat_ngram_size: 0,
+      min_length: 0,
+      eos_token_id: this.tokenizer.eos_token_id,
+      pad_token_id: this.tokenizer.pad_token_id,
+      bos_token_id: this.tokenizer.bos_token_id,
+      ...generation_config
+    };
+  }
+
+  /**
+   * LogitsProcessorListを作成
+   */
+  getLogitsProcessor() {
+    const processors = [];
+
+    // 温度適用
+    if (this.generation_config.temperature &&
+      this.generation_config.temperature !== 1.0) {
+      processors.push(new
+        TemperatureLogitsWarper(this.generation_config.temperature));
+    }
+
+    // Top-k適用
+    if (this.generation_config.top_k && this.generation_config.top_k
+      > 0) {
+      processors.push(new
+        TopKLogitsWarper(this.generation_config.top_k));
+    }
+
+    // Top-p適用
+    if (this.generation_config.top_p && this.generation_config.top_p
+      < 1.0) {
+      processors.push(new
+        TopPLogitsWarper(this.generation_config.top_p));
+    }
+
+    // 繰り返しペナルティ
+    if (this.generation_config.repetition_penalty &&
+      this.generation_config.repetition_penalty !== 1.0) {
+      processors.push(new RepetitionPenaltyLogitsProcessor(this.generation_config.repetition_penalty));
+    }
+
+    // N-gram繰り返し防止
+    if (this.generation_config.no_repeat_ngram_size &&
+      this.generation_config.no_repeat_ngram_size > 0) {
+      processors.push(new NoRepeatNGramLogitsProcessor(this.generation_config.no_repeat_ngram_size));
+    }
+
+    // 最小長
+    if (this.generation_config.min_length &&
+      this.generation_config.min_length > 0) {
+      processors.push(new MinLengthLogitsProcessor(
+        this.generation_config.min_length,
+        this.generation_config.eos_token_id
+      ));
+    }
+
+    return new LogitsProcessorList(...processors);
+  }
+
+  /**
+   * ONNXセッションの出力からテキストを生成
+   */
+  async generate(initial_feeds, options = {}) {
+    // generation_configを更新
+    const config = { ...this.generation_config, ...options };
+
+    // LogitsProcessorを準備
+    const logitsProcessor = this.getLogitsProcessor();
+
+    // 入力の準備
+    let feeds = { ...initial_feeds };
+    let input_ids = Array.isArray(feeds.input_ids.data)
+      ? feeds.input_ids.data.map(id => Number(id))
+      : Array.from(feeds.input_ids.data).map(id => Number(id));
+
+    const all_input_ids = [[...input_ids]];
+
+    // 生成ループ
+    for (let step = 0; step < config.max_length - input_ids.length;
+      step++) {
+      // モデル実行
+      const output = await this.session.run(feeds);
+
+      // logitsを取得
+      const logits_output = output.logits || output.output;
+      const vocab_size =
+        logits_output.dims[logits_output.dims.length - 1];
+      const seq_length = logits_output.dims[1];
+
+      // 最後のトークンのlogitsをTensorとして作成
+      const last_token_logits_data = new Float32Array(vocab_size);
+      const offset = (seq_length - 1) * vocab_size;
+      for (let i = 0; i < vocab_size; i++) {
+        last_token_logits_data[i] = logits_output.data[offset + i];
+      }
+
+      const logits = new ort.Tensor(
+        'float32',
+        last_token_logits_data,
+        [1, vocab_size]
+      );
+
+      // LogitsProcessorを適用
+      const processed_logits = logitsProcessor(all_input_ids,
+        logits);
+
+      // トークン選択
+      let next_token_id;
+      if (config.do_sample) {
+        next_token_id = this.sampleFromLogits(processed_logits);
+      } else {
+        // Greedy
+        const logits_array = Array.from(processed_logits.data);
+        next_token_id =
+          logits_array.indexOf(Math.max(...logits_array));
+      }
+
+      // 生成されたトークンを追加
+      all_input_ids[0].push(next_token_id);
+
+      // 終了条件チェック
+      if (next_token_id === config.eos_token_id) {
+        break;
+      }
+
+      // 次のステップの入力を準備
+      feeds = this.prepareNextInputs(feeds, next_token_id,
+        all_input_ids[0].length);
+    }
+
+    // デコード
+    const generated_text = this.tokenizer.decode(all_input_ids[0], {
+      skip_special_tokens: true,
+      clean_up_tokenization_spaces: true
+    });
+
+    return generated_text;
+  }
+
+  /**
+   * 処理済みlogitsからサンプリング
+   */
+  sampleFromLogits(logits) {
+    const probs = this.softmax(Array.from(logits.data));
+
+    const random = Math.random();
+    let cumsum = 0;
+    for (let i = 0; i < probs.length; i++) {
+      cumsum += probs[i];
+      if (random < cumsum) {
+        return i;
+      }
+    }
+    return probs.length - 1;
+  }
+
+  /**
+   * Softmax関数
+   */
+  softmax(logits) {
+    const max_logit = Math.max(...logits);
+    const exp_logits = logits.map(x => Math.exp(x - max_logit));
+    const sum_exp = exp_logits.reduce((a, b) => a + b, 0);
+    return exp_logits.map(x => x / sum_exp);
+  }
+
+  /**
+   * 次のステップの入力を準備
+   */
+  prepareNextInputs(current_feeds, next_token_id, total_length) {
+    const new_feeds = {};
+
+    // input_ids
+    new_feeds.input_ids = {
+      dims: [1, 1],
+      type: 'int64',
+      data: new BigInt64Array([BigInt(next_token_id)])
+    };
+
+    // attention_mask
+    if (current_feeds.attention_mask) {
+      new_feeds.attention_mask = {
+        dims: [1, total_length],
+        type: 'int64',
+        data: new BigInt64Array(total_length).fill(1n)
+      };
+    }
+
+    // past_key_valuesがある場合は引き継ぐ
+    for (const key in current_feeds) {
+      if (key.startsWith('past_key_values') ||
+        key.startsWith('present')) {
+        new_feeds[key] = current_feeds[key];
+      }
+    }
+
+    return new_feeds;
+  }
+}
