@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAppContext } from '../../context/AppContext'
-import { getMethodColor, getStatusColor, formatDate } from '../../lib/utils'
+import { getMethodColor, getStatusColor } from '../../lib/colors'
+import { formatDate } from '../../lib/formatters'
 
 // 履歴データの正規化とバリデーション
 const normalizeHistoryItem = (history: any) => {

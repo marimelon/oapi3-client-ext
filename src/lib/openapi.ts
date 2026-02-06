@@ -1,6 +1,7 @@
 import * as yaml from 'js-yaml'
 import { EndpointInfo, HttpMethod } from '../types'
-import { safeJsonParse, debugLog } from './utils'
+import { safeJsonParse } from './json'
+import { debugLog } from './debug'
 import { OPENAPI_CONSTANTS } from './constants'
 
 export class OpenApiParser {

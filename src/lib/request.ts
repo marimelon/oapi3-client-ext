@@ -1,5 +1,6 @@
 import { RequestHistory } from '../types'
-import { generateId, safeJsonStringify, safeJsonParse } from './utils'
+import { generateId } from './utils'
+import { safeJsonStringify, safeJsonParse } from './json'
 import { headerModifier } from './headerModifier'
 
 export interface RequestConfig {

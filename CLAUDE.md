@@ -239,11 +239,37 @@ Chrome extension permissions allow bypassing CORS restrictions that would normal
 - `src/hooks/useOpenApi.ts`: OpenAPI business logic hook
 - `src/hooks/useRequest.ts`: Request execution logic hook
 
+### Utility Modules (src/lib/)
+- `src/lib/utils.ts`: General utilities (generateId, debounce, getErrorMessage)
+- `src/lib/debug.ts`: Debug logging functions (debugLog, debugWarn, debugError)
+- `src/lib/formatters.ts`: Date and byte formatting (formatDate, formatBytes)
+- `src/lib/json.ts`: Safe JSON parse/stringify (safeJsonParse, safeJsonStringify)
+- `src/lib/colors.ts`: HTTP method/status color classes (getMethodColor, getStatusColor)
+- `src/lib/url-utils.ts`: URL and path parameter utilities (extractPathParameters, replacePathParameters, validatePathParameters, buildUrlPreview)
+- `src/lib/validation.ts`: Input validation (isValidUrl, isOpenApiFile)
+
 ### Request Body Builder Components
 - `src/options/components/RequestBodyEditor.tsx`: Main container with mode switching
 - `src/options/components/RequestBodyForm.tsx`: Schema-based form generator
 - `src/options/components/SchemaFieldInput.tsx`: Individual field input components
 - `src/options/components/RequestBodyModeToggle.tsx`: Form/Raw mode toggle
+
+### RequestPanel Sub-components
+- `src/options/components/RequestPanel.tsx`: Main request configuration container
+- `src/options/components/PathParametersSection.tsx`: Path parameter inputs
+- `src/options/components/QueryParametersSection.tsx`: Spec-defined query parameter inputs
+- `src/options/components/CustomQueryParametersSection.tsx`: Custom query params with add/remove
+- `src/options/components/CustomHeadersSection.tsx`: Custom headers with add/remove
+- `src/hooks/useSavedRequest.ts`: Auto-save/load request parameters per endpoint
+- `src/hooks/useUrlInput.ts`: URL input field state and query param extraction
+
+### ResponsePanel Sub-components
+- `src/options/components/ResponsePanel.tsx`: Main response display container
+- `src/options/components/ResponseStatusSection.tsx`: Status display with expandable details
+- `src/options/components/ResponseHeadersSection.tsx`: Collapsible headers display
+- `src/options/components/ResponseBodySection.tsx`: Body display with tree/raw/jq modes
+- `src/hooks/useResizePanel.ts`: Reusable panel resize logic
+- `src/hooks/useJqProcessing.ts`: jq query state management and debounced processing
 
 ### UI Components
 - All components support dark mode

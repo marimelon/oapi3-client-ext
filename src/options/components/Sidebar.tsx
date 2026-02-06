@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useAppContext } from '../../context/AppContext'
 import { useStorage } from '../../hooks/useStorage'
 import { useOpenApi } from '../../hooks/useOpenApi'
-import { getMethodColor } from '../../lib/utils'
+import { getMethodColor } from '../../lib/colors'
 import ApiLoader from './ApiLoader'
 import EnvironmentSelector from './EnvironmentSelector'
 
