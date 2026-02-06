@@ -444,10 +444,19 @@ export class OpenApiParser {
 
       if (!jsonContent?.schema) return null
 
+      // スキーマの正規化: properties があるが type がない場合は object と推論
+      const schema = { ...jsonContent.schema }
+      if (!schema.type && schema.properties) {
+        schema.type = 'object'
+      }
+      if (!schema.type && schema.items) {
+        schema.type = 'array'
+      }
+
       return {
         required: requestBody.required || false,
         description: requestBody.description,
-        schema: jsonContent.schema,
+        schema,
         contentType: Object.keys(content)[0] || 'application/json',
         example: jsonContent.example || jsonContent.schema.example
       }
@@ -551,7 +560,7 @@ export class OpenApiParser {
       return schema.example
     }
 
-    if (schema.type === 'object' && schema.properties) {
+    if ((schema.type === 'object' || (!schema.type && schema.properties)) && schema.properties) {
       const sample: Record<string, any> = {}
       for (const [key, propSchema] of Object.entries(schema.properties)) {
         sample[key] = this.generateSampleData(propSchema)
@@ -559,7 +568,7 @@ export class OpenApiParser {
       return sample
     }
 
-    if (schema.type === 'array' && schema.items) {
+    if ((schema.type === 'array' || (!schema.type && schema.items)) && schema.items) {
       return [this.generateSampleData(schema.items)]
     }
 

@@ -23,7 +23,7 @@ export default function RequestBodyForm({ schema, value, onChange }: RequestBody
 
   return (
     <div className="space-y-2">
-      {schema.schema.type === 'object' && schema.schema.properties ? (
+      {(schema.schema.type === 'object' || schema.schema.properties) && schema.schema.properties ? (
         // Object schema - render each property
         filterReadOnlyProperties(schema.schema.properties)
           .map(([propName, propSchema]: [string, any]) => (

@@ -22,14 +22,21 @@ export function hasOneOfSchema(schema: Schema): boolean {
 
 export function canUseFormMode(schema: any): boolean {
   if (!schema || !schema.schema) return false
-  
-  const schemaType = schema.schema.type
+
+  const s = schema.schema
+  const schemaType = s.type
+
+  // type が明示されていなくても properties や items があればフォームモード可
+  if (!schemaType) {
+    return Boolean(s.properties || s.items)
+  }
+
   return Boolean(
-    schemaType === 'object' || 
-    schemaType === 'array' || 
-    schemaType === 'string' || 
-    schemaType === 'number' || 
-    schemaType === 'integer' || 
+    schemaType === 'object' ||
+    schemaType === 'array' ||
+    schemaType === 'string' ||
+    schemaType === 'number' ||
+    schemaType === 'integer' ||
     schemaType === 'boolean'
   )
 }
