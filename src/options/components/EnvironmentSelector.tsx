@@ -144,7 +144,7 @@ export default function EnvironmentSelector() {
         <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Environment</span>
         <button
           onClick={handleNewEnvironment}
-          className="p-0.5 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 rounded"
+          className="p-0.5 text-gray-400 dark:text-gray-300 hover:text-gray-600 dark:hover:text-gray-100 rounded"
           title="Add Environment"
         >
           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -189,7 +189,7 @@ export default function EnvironmentSelector() {
                   )}
                 </div>
                 <svg
-                  className={`w-3 h-3 text-gray-400 dark:text-gray-500 transition-transform ${showDropdown ? 'rotate-180' : ''}`}
+                  className={`w-3 h-3 text-gray-400 dark:text-gray-300 transition-transform ${showDropdown ? 'rotate-180' : ''}`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -241,7 +241,7 @@ export default function EnvironmentSelector() {
                       <div className="flex space-x-1 opacity-0 group-hover:opacity-100">
                         <button
                           onClick={(e) => handleInlineEdit(env, e)}
-                          className="p-0.5 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 rounded"
+                          className="p-0.5 text-gray-400 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 rounded"
                           title="Rename"
                         >
                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -254,7 +254,7 @@ export default function EnvironmentSelector() {
                             handleEditEnvironment(env)
                             setShowDropdown(false)
                           }}
-                          className="p-0.5 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 rounded"
+                          className="p-0.5 text-gray-400 dark:text-gray-300 hover:text-gray-100 dark:hover:text-gray-100 rounded"
                           title="Edit Details"
                         >
                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -266,7 +266,7 @@ export default function EnvironmentSelector() {
                             e.stopPropagation()
                             handleDelete(env, e)
                           }}
-                          className="p-0.5 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 rounded"
+                          className="p-0.5 text-gray-400 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 rounded"
                           title="Delete"
                         >
                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
