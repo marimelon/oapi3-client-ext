@@ -33,37 +33,39 @@ export class RequestBuilder {
 
   // リクエストURL構築
   buildUrl(
-    baseUrl: string, 
-    path: string, 
-    pathParams: Record<string, string> = {}, 
-    queryParams: Record<string, string> = {}
+    baseUrl: string,
+    path: string,
+    pathParams: Record<string, string> = {},
+    queryParams: Record<string, string> = {},
+    authQueryParams: Record<string, string> = {}
   ): string {
     try {
       // ベースURLの正規化
       let url = baseUrl.replace(/\/$/, '')
-      
+
       // パスの正規化
       let normalizedPath = path.startsWith('/') ? path : '/' + path
-      
+
       // パスパラメータの置換
       for (const [key, value] of Object.entries(pathParams)) {
         normalizedPath = normalizedPath.replace(`{${key}}`, encodeURIComponent(value))
       }
-      
+
       // URLの結合
       const fullUrl = url + normalizedPath
-      
-      // クエリパラメータの追加
-      if (Object.keys(queryParams).length > 0) {
+
+      // クエリパラメータの追加（auth → 通常、通常が優先）
+      const allQueryParams = { ...authQueryParams, ...queryParams }
+      if (Object.keys(allQueryParams).length > 0) {
         const urlObj = new URL(fullUrl)
-        for (const [key, value] of Object.entries(queryParams)) {
+        for (const [key, value] of Object.entries(allQueryParams)) {
           if (value !== undefined && value !== null && value !== '') {
             urlObj.searchParams.set(key, value)
           }
         }
         return urlObj.toString()
       }
-      
+
       return fullUrl
     } catch (error) {
       console.error('Failed to build URL:', error)
@@ -73,25 +75,33 @@ export class RequestBuilder {
 
   // リクエストヘッダー構築
   buildHeaders(
-    envHeaders: Record<string, string> = {}, 
+    authHeaders: Record<string, string> = {},
+    envHeaders: Record<string, string> = {},
     customHeaders: Record<string, string> = {}
   ): Record<string, string> {
     const headers: Record<string, string> = {}
-    
-    // 環境ヘッダーを追加
+
+    // 認証ヘッダーを追加（最低優先）
+    for (const [key, value] of Object.entries(authHeaders)) {
+      if (value && value.trim() !== '') {
+        headers[key] = value.trim()
+      }
+    }
+
+    // 環境ヘッダーで上書き
     for (const [key, value] of Object.entries(envHeaders)) {
       if (value && value.trim() !== '') {
         headers[key] = value.trim()
       }
     }
-    
-    // カスタムヘッダーで上書き
+
+    // カスタムヘッダーで上書き（最高優先）
     for (const [key, value] of Object.entries(customHeaders)) {
       if (value && value.trim() !== '') {
         headers[key] = value.trim()
       }
     }
-    
+
     return headers
   }
 

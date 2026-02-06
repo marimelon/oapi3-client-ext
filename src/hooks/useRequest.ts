@@ -4,6 +4,7 @@ import { Environment, OpenAPISpec, EndpointInfo } from '../types'
 import { useStorage } from './useStorage'
 import { useAppContext } from '../context/AppContext'
 import { lastRequestStorage } from '../lib/lastRequestStorage'
+import { generateAuthHeaders, generateAuthQueryParams } from '../lib/auth'
 
 export interface RequestState {
   loading: boolean
@@ -34,16 +35,22 @@ export function useRequest() {
       dispatch({ type: 'SET_REQUEST_LOADING', payload: true })
       dispatch({ type: 'SET_REQUEST_ERROR', payload: null })
 
+      // 認証ヘッダー・クエリパラメータの生成
+      const authHeaders = generateAuthHeaders(environment.auth)
+      const authQueryParams = generateAuthQueryParams(environment.auth)
+
       // URLの構築
       const url = requestBuilder.buildUrl(
         environment.baseUrl,
         endpoint.path,
         parameters.pathParams,
-        parameters.queryParams
+        parameters.queryParams,
+        authQueryParams
       )
 
-      // ヘッダーの構築
+      // ヘッダーの構築（auth → env → custom の優先順位）
       const headers = requestBuilder.buildHeaders(
+        authHeaders,
         environment.headers,
         parameters.headers
       )
@@ -123,14 +130,19 @@ export function useRequest() {
     }
   ) => {
     try {
+      const authHeaders = generateAuthHeaders(environment.auth)
+      const authQueryParams = generateAuthQueryParams(environment.auth)
+
       const url = requestBuilder.buildUrl(
         environment.baseUrl,
         endpoint.path,
         parameters.pathParams,
-        parameters.queryParams
+        parameters.queryParams,
+        authQueryParams
       )
 
       const headers = requestBuilder.buildHeaders(
+        authHeaders,
         environment.headers,
         parameters.headers
       )

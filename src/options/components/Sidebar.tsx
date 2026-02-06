@@ -3,6 +3,7 @@ import { useAppContext } from '../../context/AppContext'
 import { useStorage } from '../../hooks/useStorage'
 import { useOpenApi } from '../../hooks/useOpenApi'
 import { getMethodColor } from '../../lib/colors'
+import { endpointRequiresAuth, getEndpointSecurityRequirements } from '../../lib/auth'
 import ApiLoader from './ApiLoader'
 import EnvironmentSelector from './EnvironmentSelector'
 
@@ -180,6 +181,12 @@ export default function Sidebar() {
                                   <span className={`px-1 py-0.5 text-xs font-medium rounded ${getMethodColor(endpoint.method)}`}>
                                     {endpoint.method}
                                   </span>
+                                  {endpointRequiresAuth(getEndpointSecurityRequirements(
+                                    endpoint.security,
+                                    state.selectedSpec?.spec.security
+                                  )) && (
+                                    <span className="text-xs" title="Requires authentication">🔒</span>
+                                  )}
                                 </div>
                                 <div className="font-mono text-xs text-gray-700 dark:text-gray-300 break-all">
                                   {endpoint.path}

@@ -119,6 +119,13 @@ export interface SecurityRequirement {
   [key: string]: string[]
 }
 
+export interface AuthConfig {
+  type: 'none' | 'bearer' | 'apiKey' | 'basic'
+  bearer?: { token: string }
+  apiKey?: { name: string; value: string; in: 'header' | 'query' }
+  basic?: { username: string; password: string }
+}
+
 export interface OpenAPISpec {
   id: string
   name: string
@@ -133,6 +140,7 @@ export interface Environment {
   baseUrl: string
   headers: Record<string, string>
   isDefault: boolean
+  auth?: AuthConfig
 }
 
 export interface RequestHistory {
@@ -163,6 +171,7 @@ export interface EndpointInfo {
   parameters?: Parameter[]
   requestBody?: RequestBody | Reference
   responses?: Record<string, Response | Reference>
+  security?: SecurityRequirement[]
 }
 
 export interface SavedRequest {

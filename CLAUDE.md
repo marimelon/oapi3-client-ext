@@ -200,6 +200,27 @@ Body:
 ======================================================
 ```
 
+### OpenAPI Security Scheme Support
+Automatic authentication injection based on OpenAPI security schemes configured per-environment.
+
+**Supported Auth Types:**
+- **Bearer Token** (`Authorization: Bearer <token>`)
+- **API Key** (header or query parameter)
+- **Basic Auth** (`Authorization: Basic <base64>`)
+
+**Architecture:**
+- **AuthConfig Type**: Per-environment auth configuration stored alongside baseUrl and headers
+- **Auth Library** (`src/lib/auth.ts`): Header/query param generation, security requirement resolution
+- **Environment Integration**: Auth configured in Environment modal, auto-detected from spec
+- **Header Priority**: Auth headers (lowest) → Environment headers → Custom headers (highest)
+
+**UX Features:**
+- Auto-detection of available auth schemes from loaded OpenAPI spec
+- Auth status indicator in RequestPanel (configured/required)
+- Lock icon (🔒) on protected endpoints in Sidebar
+- Show/hide toggle for sensitive values (tokens, passwords)
+- API Key name auto-filled from spec's securitySchemes
+
 ## Chrome Extension Specifics
 
 ### Manifest V3 Configuration
@@ -247,6 +268,11 @@ Chrome extension permissions allow bypassing CORS restrictions that would normal
 - `src/lib/colors.ts`: HTTP method/status color classes (getMethodColor, getStatusColor)
 - `src/lib/url-utils.ts`: URL and path parameter utilities (extractPathParameters, replacePathParameters, validatePathParameters, buildUrlPreview)
 - `src/lib/validation.ts`: Input validation (isValidUrl, isOpenApiFile)
+- `src/lib/auth.ts`: Auth utilities (generateAuthHeaders, generateAuthQueryParams, getEndpointSecurityRequirements, isAuthConfigured)
+
+### Authentication Components
+- `src/options/components/AuthConfigForm.tsx`: Auth configuration form for Environment modal
+- `src/options/components/AuthSection.tsx`: Auth status indicator in RequestPanel
 
 ### Request Body Builder Components
 - `src/options/components/RequestBodyEditor.tsx`: Main container with mode switching

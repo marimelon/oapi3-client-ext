@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
 import { useAppContext } from '../../context/AppContext'
 import { useStorage } from '../../hooks/useStorage'
-import { Environment } from '../../types'
+import { Environment, AuthConfig } from '../../types'
 import { generateId } from '../../lib/utils'
+import { getSecuritySchemes } from '../../lib/auth'
+import AuthConfigForm from './AuthConfigForm'
 
 export default function EnvironmentSelector() {
   const { state, dispatch } = useAppContext()
@@ -18,10 +20,16 @@ export default function EnvironmentSelector() {
   // ESLintエラーを回避するため明示的に未使用と記載
   void showTooltip
   const inlineInputRef = useRef<HTMLInputElement>(null)
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string
+    baseUrl: string
+    headers: Array<{ key: string; value: string }>
+    auth: AuthConfig
+  }>({
     name: '',
     baseUrl: '',
-    headers: [{ key: '', value: '' }]
+    headers: [{ key: '', value: '' }],
+    auth: { type: 'none' }
   })
 
   useEffect(() => {
@@ -41,7 +49,8 @@ export default function EnvironmentSelector() {
     setFormData({
       name: '',
       baseUrl: '',
-      headers: [{ key: '', value: '' }]
+      headers: [{ key: '', value: '' }],
+      auth: { type: 'none' }
     })
     setEditingEnv(null)
     setShowForm(true)
@@ -51,7 +60,8 @@ export default function EnvironmentSelector() {
     setFormData({
       name: env.name,
       baseUrl: env.baseUrl,
-      headers: Object.entries(env.headers).map(([key, value]) => ({ key, value }))
+      headers: Object.entries(env.headers).map(([key, value]) => ({ key, value })),
+      auth: env.auth || { type: 'none' }
     })
     setEditingEnv(env)
     setShowForm(true)
@@ -72,7 +82,8 @@ export default function EnvironmentSelector() {
       name: formData.name.trim(),
       baseUrl: formData.baseUrl.trim(),
       headers,
-      isDefault: !editingEnv && state.environments.length === 0
+      isDefault: !editingEnv && state.environments.length === 0,
+      auth: formData.auth
     }
 
     await saveEnvironment(environment, !!editingEnv)
@@ -122,6 +133,10 @@ export default function EnvironmentSelector() {
       handleInlineEditCancel()
     }
   }
+
+  const availableSchemes = state.selectedSpec
+    ? getSecuritySchemes(state.selectedSpec.spec)
+    : undefined
 
   return (
     <div className="space-y-1">
@@ -290,6 +305,12 @@ export default function EnvironmentSelector() {
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               
+              <AuthConfigForm
+                auth={formData.auth}
+                onChange={(auth) => setFormData(prev => ({ ...prev, auth }))}
+                availableSchemes={availableSchemes}
+              />
+
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Headers</label>
                 {formData.headers.map((header, index) => (

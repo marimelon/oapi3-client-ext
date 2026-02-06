@@ -296,7 +296,8 @@ export class OpenApiParser {
               description: operation.description,
               parameters: operation.parameters,
               requestBody: operation.requestBody,
-              responses: operation.responses
+              responses: operation.responses,
+              security: operation.security
             })
           }
         }

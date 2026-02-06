@@ -16,6 +16,7 @@ import PathParametersSection from './PathParametersSection'
 import QueryParametersSection from './QueryParametersSection'
 import CustomQueryParametersSection from './CustomQueryParametersSection'
 import CustomHeadersSection from './CustomHeadersSection'
+import AuthSection from './AuthSection'
 
 export default function RequestPanel() {
   const { state } = useAppContext()
@@ -371,6 +372,12 @@ export default function RequestPanel() {
           <span className="font-medium">Env:</span> {state.selectedEnvironment.name}
         </div>
       </div>
+
+      <AuthSection
+        endpoint={selectedEndpoint}
+        selectedSpec={state.selectedSpec}
+        selectedEnvironment={state.selectedEnvironment}
+      />
 
       <div className="space-y-3">
         <PathParametersSection
