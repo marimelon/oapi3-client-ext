@@ -33,7 +33,7 @@ export class StorageManager {
   async getOpenApiSpecs(): Promise<OpenAPISpec[]> {
     try {
       const result = await chrome.storage.local.get(['openApiSpecs'])
-      return result.openApiSpecs || []
+      return (result.openApiSpecs as OpenAPISpec[] | undefined) || []
     } catch (error) {
       console.error('Failed to get OpenAPI specs:', error)
       return []
@@ -78,7 +78,7 @@ export class StorageManager {
   async getEnvironments(): Promise<Environment[]> {
     try {
       const result = await chrome.storage.local.get([STORAGE_CONSTANTS.STORAGE_KEYS.ENVIRONMENTS])
-      return result[STORAGE_CONSTANTS.STORAGE_KEYS.ENVIRONMENTS] || []
+      return (result[STORAGE_CONSTANTS.STORAGE_KEYS.ENVIRONMENTS] as Environment[] | undefined) || []
     } catch (error) {
       console.error('Failed to get environments:', error)
       return []
@@ -121,7 +121,7 @@ export class StorageManager {
   async getRequestHistory(limit = 50): Promise<RequestHistory[]> {
     try {
       const result = await chrome.storage.local.get([STORAGE_CONSTANTS.STORAGE_KEYS.REQUEST_HISTORY])
-      const histories = result[STORAGE_CONSTANTS.STORAGE_KEYS.REQUEST_HISTORY] || []
+      const histories = (result[STORAGE_CONSTANTS.STORAGE_KEYS.REQUEST_HISTORY] as RequestHistory[] | undefined) || []
       return histories.slice(0, limit)
     } catch (error) {
       console.error('Failed to get request history:', error)
@@ -151,7 +151,7 @@ export class StorageManager {
   async getSelectedEnvironmentId(): Promise<string | null> {
     try {
       const result = await chrome.storage.local.get(['selectedEnvironmentId'])
-      return result.selectedEnvironmentId || null
+      return (result.selectedEnvironmentId as string | undefined) || null
     } catch (error) {
       console.error('Failed to get selected environment:', error)
       return null
@@ -194,7 +194,7 @@ export class StorageManager {
   async getSavedRequests(): Promise<SavedRequest[]> {
     try {
       const result = await chrome.storage.local.get([STORAGE_CONSTANTS.STORAGE_KEYS.SAVED_REQUESTS])
-      return result[STORAGE_CONSTANTS.STORAGE_KEYS.SAVED_REQUESTS] || []
+      return (result[STORAGE_CONSTANTS.STORAGE_KEYS.SAVED_REQUESTS] as SavedRequest[] | undefined) || []
     } catch (error) {
       console.error('Failed to get saved requests:', error)
       return []
