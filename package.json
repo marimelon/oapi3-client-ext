@@ -22,8 +22,8 @@
     "@tailwindcss/postcss": "^4.1.17",
     "@types/chrome": "^0.1.29",
     "@types/js-yaml": "^4.0.9",
-    "@types/react": "^19.1.8",
-    "@types/react-dom": "^19.1.6",
+    "@types/react": "^19.2.13",
+    "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.0.4",
     "@wxt-dev/module-react": "^1.1.5",
     "autoprefixer": "^10.4.22",
@@ -31,7 +31,7 @@
     "tailwindcss": "^4.1.17",
     "typescript": "^5.9.2",
     "vite": "^7.3.1",
-    "wxt": "^0.20.11"
+    "wxt": "^0.20.14"
   },
   "volta": {
     "node": "22.17.0"
